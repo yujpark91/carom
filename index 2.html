@@ -1,0 +1,2075 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>캐롬 당구 시뮬레이터 — 온라인 대전</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+:root{
+  --bg:#0f1216; --panel:#171b21; --panel2:#1e232b; --line:#2a313b; --text:#e8eaed; --mute:#9aa3ad;
+  --accent:#f2c14e; --good:#5cd18a; --bad:#ff6b6b; --cloth:#1d5ea8; --cloth2:#174f8f; --rail:#3a2416;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;font-size:14px}
+header{display:flex;align-items:center;gap:8px;padding:10px 12px 6px;flex-wrap:wrap}
+header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:-0.2px;flex:1;min-width:160px}
+.tabs{display:flex;background:var(--panel2);border-radius:10px;padding:3px}
+.tabs button{border:0;background:transparent;color:var(--mute);padding:6px 12px;border-radius:8px;font-weight:600;font-size:13px}
+.tabs button.on{background:var(--accent);color:#1a1a1a}
+#top{display:flex;gap:8px;padding:0 8px;align-items:flex-start;justify-content:center}
+#wrap{position:relative;padding:0;flex:0 0 auto}
+#side{flex:0 0 124px;width:124px;display:flex;flex-direction:column;gap:6px}
+#side #spin{width:116px;height:116px;align-self:center}
+#side .spinread{font-size:11px;margin-top:-2px}
+.sidepow label{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mute)}
+.sidepow label b{color:var(--text)}
+.sidepow input{height:22px}
+.aimgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.aimgrid button{padding:6px 0;font-size:12.5px;border-radius:8px}
+#side .primary{padding:11px 0;font-size:16px;width:100%}
+#side #btnUndo{width:100%}
+.aimread{font-size:12.5px;color:var(--mute);line-height:1.4}
+.aimread b{color:var(--text)}
+header{padding:8px 12px 6px}
+#side .sc{display:flex;flex-direction:column;gap:6px}
+@media (max-height:500px){ header h1{display:none} header{padding:4px 12px} }
+@media (max-height:500px) and (orientation:landscape){
+  #side{flex-basis:244px;width:244px;flex-direction:row;gap:8px}
+  #side .sc{flex:1;min-width:0}
+  #side #spin{width:104px;height:104px}
+}
+canvas#tbl{display:block;margin:0 auto;touch-action:none;border-radius:10px}
+#status{margin:6px 10px 0;padding:8px 10px;border-radius:10px;background:var(--panel);display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-height:38px}
+#status .res{font-weight:800;font-size:15px}
+#status .res.ok{color:var(--good)} #status .res.ng{color:var(--bad)}
+#status .seq{color:var(--mute);font-size:12.5px}
+.panel{margin:8px 10px;background:var(--panel);border-radius:12px;padding:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select,button,input[type=number]{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+button{font-weight:600}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:#1a1a1a;border-color:var(--accent);font-weight:800;padding:10px 18px;font-size:15px}
+button.sm{padding:6px 9px;font-size:13px}
+button.tog.on{border-color:var(--accent);color:var(--accent)}
+select{flex:1;min-width:0}
+#desc{color:var(--mute);font-size:12.5px;line-height:1.5;margin-top:6px}
+.ctl{display:grid;grid-template-columns:132px 1fr;gap:12px;align-items:start}
+#spin{background:transparent;touch-action:none;display:block}
+.sl{margin-bottom:8px}
+.sl label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mute);margin-bottom:2px}
+.sl label b{color:var(--text);font-weight:700}
+input[type=range]{width:100%;accent-color:var(--accent);height:26px}
+.aim{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.aim .read{font-size:12.5px;color:var(--mute);margin-left:4px;line-height:1.35}
+.aim .read b{color:var(--text)}
+.spinread{font-size:12px;color:var(--mute);text-align:center;margin-top:2px;line-height:1.35}
+.spinread b{color:var(--text)}
+details.mini{padding:7px 10px}
+details.mini summary{font-size:12.5px;font-weight:600;color:var(--mute)}
+.pgrid{display:grid;grid-template-columns:1fr auto;gap:2px 12px;margin-top:6px;font-size:11.5px;color:var(--mute)}
+.pgrid b{color:var(--text);font-weight:600;text-align:right}
+details{margin:8px 10px;background:var(--panel);border-radius:12px;padding:10px}
+summary{font-weight:700;cursor:pointer}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;margin-top:8px}
+.note{color:var(--mute);font-size:12.5px;line-height:1.6}
+.note a{color:var(--accent)}
+#busy{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none}
+#busy span{background:rgba(0,0,0,.75);padding:10px 14px;border-radius:10px;font-weight:700}
+.legend{display:flex;gap:10px;font-size:12px;color:var(--mute);align-items:center}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:-1px}
+@media (min-width:900px){
+  body{max-width:1200px;margin:0 auto}
+}
+
+#btnHR{background:#2b6cb0;border-color:#2b6cb0;color:#fff;font-weight:800;padding:6px 12px;font-size:13px}
+#gameHud{display:none;margin:0 10px 6px;padding:6px 8px;border-radius:10px;background:#1b2a3d;border:1px solid #2b6cb0;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px}
+#gameHud .k{color:var(--mute)} #gameHud b{font-size:14px}
+#gameHud button{padding:4px 8px;font-size:12px}
+@media (max-width:520px){ header h1{display:none} header{justify-content:space-between} }
+#gameHud .grow{flex:1}
+body.ingame .basic-only{display:none !important}
+body.ingame header{display:none}
+body.ingame #gameHud{margin-top:8px}
+#hrModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+#hrModal .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;width:100%;max-width:420px;max-height:92vh;overflow:auto}
+#hrModal h2{margin:0 0 4px;font-size:18px}
+#hrModal h3{margin:14px 0 6px;font-size:13px;color:var(--mute);font-weight:700}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:90px;padding:10px 6px;line-height:1.3}
+.seg button.on{background:var(--accent);color:#1a1a1a;border-color:var(--accent)}
+.seg button small{display:block;font-weight:600;font-size:11.5px;opacity:.85}
+.stepper{display:flex;align-items:center;gap:8px}
+.stepper button{width:46px;height:44px;font-size:20px;padding:0}
+.stepper input{width:90px;text-align:center;font-size:20px;font-weight:800;height:44px}
+#hrEnd{display:none}
+.big{font-size:28px;font-weight:900;margin:6px 0}
+
+table.keys{width:100%;border-collapse:collapse;font-size:13.5px}
+table.keys th{text-align:left;color:var(--accent);font-size:12.5px;padding:10px 0 4px}
+table.keys td{padding:4px 0;border-bottom:1px solid var(--line)}
+table.keys td:first-child{width:46%}
+kbd{display:inline-block;min-width:24px;text-align:center;padding:2px 6px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;font-family:inherit;font-weight:700;font-size:12.5px}
+#keyToast{position:fixed;left:50%;top:12px;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700;pointer-events:none;opacity:0;transition:opacity .2s;z-index:70}
+
+#spinPad{position:relative;align-self:center;width:116px;height:116px;border-radius:14px;background:repeating-linear-gradient(0deg,transparent 0 22px,rgba(255,255,255,.04) 22px 23px),repeating-linear-gradient(90deg,transparent 0 22px,rgba(255,255,255,.04) 22px 23px),var(--panel2);border:1px solid var(--line);touch-action:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;color:var(--mute);line-height:1.35}
+#spinPad::before,#spinPad::after{content:"";position:absolute;background:rgba(255,255,255,.12)}
+#spinPad::before{left:50%;top:10px;bottom:10px;width:1px}
+#spinPad::after{top:50%;left:10px;right:10px;height:1px}
+#spinPad.on{border-color:var(--accent)}
+#spinPad .ph{position:relative;z-index:1;background:var(--panel2);padding:2px 4px;border-radius:6px}
+#spinPad .pc{position:absolute;width:14px;height:14px;border-radius:50%;background:#1565c0;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none;z-index:2}
+@media (max-height:500px) and (orientation:landscape){ #spinPad{width:104px;height:104px} }
+
+#btnNet{background:#7b3fb0;border-color:#7b3fb0;color:#fff;font-weight:800;padding:6px 12px;font-size:13px}
+#netHud{display:none;margin:8px 10px 6px;padding:6px 8px;border-radius:10px;background:#2a1d3d;border:1px solid #7b3fb0;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px}
+#netHud .np{font-weight:800;font-size:13.5px;padding:2px 6px;border-radius:6px}
+#netHud .np.turn{background:var(--accent);color:#1a1a1a}
+#netHud .k{color:var(--mute)} #netHud .grow{flex:1}
+#netHud button{padding:4px 8px;font-size:12px}
+#netModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:55;padding:16px}
+#netModal .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;width:100%;max-width:420px;max-height:92vh;overflow:auto}
+#netModal h2{margin:0 0 4px;font-size:18px} #netModal h3{margin:14px 0 6px;font-size:13px;color:var(--mute);font-weight:700}
+#netLobby,#netEnd{display:none}
+.lobp{padding:8px 10px;background:var(--panel2);border-radius:8px;margin-bottom:4px;font-weight:700}
+#btnShoot:disabled{opacity:.55}
+@media (max-width:520px){ #btnHR,#btnNet{padding:6px 9px;font-size:12px} }
+</style>
+</head>
+<body>
+<header>
+  <h1>캐롬 당구 물리 시뮬레이터</h1>
+  <div class="tabs" id="modeTabs">
+    <button data-m="3c" class="on">3구 (대대)</button>
+    <button data-m="4b">4구 (중대)</button>
+  </div>
+  <button id="btnHR">하이런 모드 시작</button>
+  <button id="btnNet">온라인 대전</button>
+</header>
+<div id="netHud">
+  <span class="np" id="nhP0"></span><span class="np" id="nhP1"></span>
+  <span class="k" id="nhInfo"></span><span class="k" id="netConn" style="color:#ff6b6b"></span>
+  <span class="grow"></span>
+  <button class="sm" id="nhMenu">방</button>
+</div>
+<div id="gameHud">
+  <span><b id="hudLevel"></b></span>
+  <span><span class="k">점수</span> <b id="hudScore"></b></span>
+  <span><span class="k">실패</span> <b id="hudFail"></b></span>
+  <span><span class="k">연속</span> <b id="hudRun"></b></span>
+  <span class="grow"></span>
+  <button class="sm" id="hudQuit">그만</button>
+</div>
+
+<div id="top">
+  <div id="wrap"><canvas id="tbl"></canvas><div id="busy"><span id="busyTxt">계산 중…</span></div></div>
+  <aside id="side">
+    <div class="sc"><canvas id="spin" width="240" height="240"></canvas>
+    <div id="spinPad" aria-label="당점 이동 패드"><span class="ph">드래그로<br>당점 이동</span><span class="pc"></span></div>
+    <div class="spinread" id="spinRead"></div>
+    <div class="sidepow"><label>세기 <b id="vShort"></b></label><input type="range" id="power" min="0.3" max="6" step="0.05" value="2.8"></div></div>
+    <div class="sc"><div class="aimgrid">
+      <button data-d="1">↺ 1°</button><button data-d="-1">↻ 1°</button>
+      <button data-d="0.1">↺ 0.1</button><button data-d="-0.1">↻ 0.1</button>
+      <button data-d="0.02">↺ .02</button><button data-d="-0.02">↻ .02</button>
+    </div>
+    <button class="primary" id="btnShoot">치기 ▶</button>
+    <button id="btnUndo" class="sm basic-only">↺ 되돌리기</button></div>
+  </aside>
+</div>
+
+<div id="status"><span class="res" id="res">조준 후 [치기]</span><span class="seq" id="seq"></span></div>
+
+<div class="panel">
+  <div class="aimread" id="aimRead"></div>
+  <div class="sl" style="margin-top:6px"><label>세기 <b id="vRead"></b></label></div>
+  <div class="sl"><label>큐 각도 (세움) <b id="eRead"></b></label><input type="range" id="elev" min="0" max="75" step="1" value="0"></div>
+  <div class="row basic-only" style="gap:6px">
+    <span style="font-size:12.5px;color:var(--mute)">표시</span>
+    <button class="sm tog on" id="tgAim">조준선 켬</button>
+    <button class="sm tog" id="tgPred">예상 경로 끔</button>
+    <button class="sm tog on" id="tgTrail">지나간 길 켬</button>
+    <button class="sm tog" id="tgSys">시스템 끔</button>
+  </div>
+  <div id="sysBox" class="basic-only" style="display:none;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--panel2);font-size:12.5px;line-height:1.5;color:var(--mute)">
+    <div><b style="color:var(--text)">포인트 눈금</b> — 다이아몬드 1칸 = 10P. 장쿠션 0~80, 단쿠션 0~40 (왼쪽 아래 코너 기준). 쿠션 순번 옆에 맞은 지점의 P값이 표시돼요.</div>
+    <div style="margin-top:6px"><b style="color:var(--text)">코너 관통선 · 당점 차트</b> — <span id="sysCorner">계산 중…</span></div>
+    <div class="row" style="margin-top:6px;gap:6px"><button class="sm" id="sysApply">차트 당점 적용</button></div>
+  </div>
+  <div class="row" style="margin-top:8px;gap:6px">
+    <button class="sm basic-only" id="btnAuto">자동 조준</button>
+    <button class="sm" id="spinReset">당점 중앙</button>
+    <button class="sm" id="btnKeys">⌨ 단축키 보기</button>
+    <button class="sm tog basic-only" id="tgPlace">공 배치</button>
+    <button class="sm basic-only" id="btnSwap" title="3구에서 노란 공을 수구로">수구 바꾸기</button>
+    <select id="speed" style="flex:0 0 auto;padding:6px 8px;font-size:13px"><option value="0.25">재생 0.25×</option><option value="0.5">재생 0.5×</option><option value="1" selected>재생 1×</option><option value="2">재생 2×</option></select>
+  </div>
+  <div class="legend" style="margin-top:8px">
+    <span>테이블 터치/드래그 → 조준 · ↺↻ 미세 조절 · 당점 패드 드래그(두 번 탭 = 중앙) · 1팁 = 반지름의 20%</span><span><span class="dot" style="background:#fff"></span>쿠션 순번</span>
+  </div>
+</div>
+
+<div class="panel basic-only">
+  <div class="row">
+    <select id="preset"></select>
+    <button class="sm" id="btnLoad">불러오기</button>
+  </div>
+  <div id="desc"></div>
+</div>
+
+<details id="phys" class="mini">
+  <summary>물리 설정값 (고정)</summary>
+  <div class="pgrid" id="physGrid"></div>
+</details>
+
+<details>
+  <summary>물리 모델과 근거</summary>
+  <div class="note">
+    <p><b>규격</b> — 공 지름 61.5mm·무게 210g, 대대 플레이 면 2.84×1.42m(다이아몬드 8×4). 중대는 당구장마다 조금씩 달라 2.54×1.27m로 두었고, 실제와 다를 수 있어요. 쿠션 높이 37mm.</p>
+    <p><b>큐 타격</b> — 당점(좌우·상하 오프셋)과 큐 각도로 충격량을 계산해 초속·회전축을 정합니다. 상단 0.4R(높이 7/10)을 치면 미끄러짐 없이 바로 구르고(자연 구름), 옆 당점은 스쿼트(수구가 반대쪽으로 밀림)를 만듭니다. 큐를 세우면 회전축이 기울어져 커브·맛세이가 생겨요.</p>
+    <p><b>천 위 운동</b> — 미끄럼 마찰(μ≈0.2)로 회전과 진행이 맞춰질 때까지 미끄러지다 구름 상태로 바뀌고, 구름 저항으로 감속합니다. 밀어치기·끌어치기의 휘어짐은 이 미끄럼 단계에서 저절로 생깁니다. 옆회전은 천과의 마찰로 서서히 줄어요.</p>
+    <p><b>공–공 충돌</b> — 반발계수 0.94, 표면 마찰은 미끄럼 속도에 따라 변하는 실측식(스로우·회전 전이 포함).</p>
+    <p><b>쿠션</b> — 공 중심보다 높은 쿠션 접점의 마찰과, 쿠션이 공을 천 쪽으로 누를 때 생기는 바닥 마찰까지 충돌 과정을 잘게 나눠 적분해 계산(Mathavan 2010 방식). 그래서 회전 방향에 따라 각이 길어지거나(순회전) 짧아지고(역회전), 구르는 공은 쿠션 뒤에 앞으로 휘어집니다.</p>
+    <p><b>한계</b> — 실제 테이블은 천 상태·온도·쿠션 고무·습도에 따라 다르므로 ‘오차 0’은 불가능해요. 여기서는 측정 자료를 바탕으로 한 표준값을 고정해 사용합니다. 공이 뜨는 점프와 쿠션의 큰 변형(법선 속도 2.5m/s 이상)은 단순화했어요.</p>
+    <p><b>참고 자료</b><br>
+      <a href="https://forums.azbilliards.com/attachments/smathavanetalimechemes-pdf.690515/">Mathavan 외 (2010), 쿠션 충돌 동역학</a><br>
+      <a href="https://drdavepoolinfo.com/?p=2349">Dr. Dave — 당구 장비 물리 상수</a><br>
+      <a href="https://billiards.colostate.edu:443/technical_proofs/new/TP_B-2.pdf">Alciatore — 구름 저항·회전 감쇠</a><br>
+      <a href="https://pooltool.readthedocs.io/en/v0.4.4/autoapi/pooltool/physics/resolve/ball_cushion/index.html">pooltool — 쿠션 충돌 모델 구현</a><br>
+      <a href="https://en.wikipedia.org/wiki/Comparison_of_cue_sports">캐롬 공 규격</a></p>
+  </div>
+</details>
+
+<div id="hrModal">
+  <div class="card">
+    <div id="hrSetup">
+      <h2>하이런 모드</h2>
+      <div class="note" style="margin:0">혼자 계속 치면서 목표 점수까지 가는 모드예요. 실패는 연속이 아니라 총합으로 세요.</div>
+      <h3>테이블 · 규칙</h3>
+      <div class="seg" id="hrTable">
+        <button data-t="3c">대대 (3쿠션)<small>두 적구 + 2적구 전 쿠션 3개 이상</small></button>
+        <button data-t="4b">중대 (4구)<small>빨간 공 2개 · 노란 공 맞으면 실패 · 공 4개 깨고 시작</small></button>
+      </div>
+      <h3>1. 난이도</h3>
+      <div class="seg" id="hrLevel">
+        <button data-l="hr">하이런<small id="lv_hr"></small></button>
+        <button data-l="master">고수 하이런<small id="lv_master"></small></button>
+        <button data-l="pro">프로 하이런<small id="lv_pro"></small></button>
+      </div>
+      <h3>2. 목표 점수</h3>
+      <div class="stepper"><button id="tgtMinus">−</button><input type="number" id="tgtVal" min="1" step="1" value="10" inputmode="numeric"><button id="tgtPlus">＋</button><span class="note">점 (1점부터, 제한 없음)</span></div>
+      <div class="note" id="hrBest" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:16px">
+        <button class="primary" id="hrStart" style="flex:1">3. 게임 시작</button>
+        <button id="hrCancel">닫기</button>
+      </div>
+    </div>
+    <div id="hrEnd">
+      <h2 id="endTitle"></h2>
+      <div class="big" id="endScore"></div>
+      <div class="note" id="endDetail"></div>
+      <div class="row" style="margin-top:16px">
+        <button class="primary" id="endRetry" style="flex:1">다시 하기</button>
+        <button id="endSetup">설정 바꾸기</button>
+        <button id="endExit">기본 모드</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div id="netModal">
+  <div class="card">
+    <div id="netSetup">
+      <h2>온라인 대전</h2>
+      <div class="note" style="margin:0">친구와 방 코드로 만나서 번갈아 쳐요. 득점하면 계속, 실패하면 차례가 넘어가요.</div>
+      <h3>내 이름</h3>
+      <input id="netName" maxlength="12" placeholder="닉네임" style="width:100%">
+      <h3>방 만들기 (방장)</h3>
+      <div class="seg" id="netType">
+        <button data-t="3c">3구 · 대대<small>기본 5점</small></button>
+        <button data-t="4b">4구 · 중대<small>기본 15점 + 마무리</small></button>
+      </div>
+      <div class="stepper" style="margin-top:8px"><button id="netTgtMinus">−</button><input type="number" id="netTgt" min="1" step="1" inputmode="numeric"><button id="netTgtPlus">＋</button><span class="note">점</span></div>
+      <div class="note" id="netRule" style="margin-top:6px"></div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="netCreate" style="flex:1">방 만들기</button></div>
+      <h3>방 들어가기 (친구)</h3>
+      <div class="row"><input id="netCode" maxlength="6" placeholder="방 코드 4글자" autocapitalize="characters" style="flex:1;text-transform:uppercase;font-weight:800;letter-spacing:2px"><button id="netJoin">들어가기</button></div>
+      <div class="note" id="netErr" style="margin-top:10px;color:#ffb4a8"></div>
+      <div class="row" style="margin-top:12px"><button id="netClose" style="flex:1">닫기</button></div>
+    </div>
+    <div id="netLobby">
+      <h2>대기실</h2>
+      <div class="row" style="align-items:center"><span class="note">방 코드</span><span class="big" id="lobCode" style="letter-spacing:4px;margin:0 6px"></span><button class="sm" id="lobCopy">코드 복사</button></div>
+      <div class="note" id="lobCfg"></div>
+      <h3>참가자</h3>
+      <div id="lobList"></div>
+      <div class="note" id="lobWait" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="primary" id="lobStart" style="flex:1">게임 시작</button>
+        <button id="lobBack">게임으로</button>
+        <button id="lobLeave">나가기</button>
+      </div>
+    </div>
+    <div id="netEnd">
+      <h2 id="endNetTitle"></h2>
+      <div class="big" id="endNetScore" style="font-size:22px"></div>
+      <div class="note" id="endNetDetail"></div>
+      <div class="note" id="endNetWait" style="margin-top:8px">방장이 다시 하기를 누르면 새 게임이 시작돼요.</div>
+      <div class="row" style="margin-top:16px">
+        <button class="primary" id="endNetAgain" style="flex:1">다시 하기</button>
+        <button id="endNetLeave">나가기</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="keyToast"></div>
+<div id="keyModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:60;padding:16px">
+  <div class="card" style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;width:100%;max-width:420px;max-height:92vh;overflow:auto">
+    <h2 style="margin:0 0 8px;font-size:18px">키보드 단축키</h2>
+    <div class="note" style="margin-bottom:8px">기본 모드와 하이런 모드 모두에서 쓸 수 있어요. 한글 입력 상태여도 작동해요.</div>
+    <table class="keys">
+      <tr><th colspan="2">방향 (조준)</th></tr>
+      <tr><td><kbd>Q</kbd></td><td>왼쪽으로 1°</td></tr>
+      <tr><td><kbd>W</kbd></td><td>왼쪽으로 0.1°</td></tr>
+      <tr><td><kbd>E</kbd></td><td>왼쪽으로 0.02°</td></tr>
+      <tr><td><kbd>R</kbd></td><td>오른쪽으로 0.02°</td></tr>
+      <tr><td><kbd>T</kbd></td><td>오른쪽으로 0.1°</td></tr>
+      <tr><td><kbd>Y</kbd></td><td>오른쪽으로 1°</td></tr>
+      <tr><th colspan="2">세기</th></tr>
+      <tr><td><kbd>A</kbd></td><td>0.5 약하게</td></tr>
+      <tr><td><kbd>S</kbd></td><td>0.05 약하게</td></tr>
+      <tr><td><kbd>D</kbd></td><td>0.05 세게</td></tr>
+      <tr><td><kbd>F</kbd></td><td>0.5 세게</td></tr>
+      <tr><th colspan="2">회전 (당점)</th></tr>
+      <tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></td><td>상·하·좌·우로 0.1팁씩</td></tr>
+      <tr><th colspan="2">큐 각도</th></tr>
+      <tr><td><kbd>O</kbd></td><td>1° 낮게</td></tr>
+      <tr><td><kbd>P</kbd></td><td>1° 높게 (최대 75°)</td></tr>
+      <tr><th colspan="2">치기</th></tr>
+      <tr><td><kbd>Enter</kbd></td><td>공 치기</td></tr>
+    </table>
+    <div class="row" style="margin-top:14px"><button class="primary" id="keyClose" style="flex:1">닫기</button></div>
+  </div>
+</div>
+<div style="height:24px"></div>
+
+<script>
+// Carom billiards physics engine (3-cushion / 4-ball)
+// Units: SI (m, s, kg, rad). World: x along table length [0,L], y along width [0,W], z up.
+(function (root) {
+  'use strict';
+
+  const DEFAULTS = {
+    R: 0.03075,      // ball radius (61.5 mm diameter)
+    m: 0.210,        // ball mass (205–220 g, typical 210 g)
+    g: 9.81,
+    muS: 0.20,       // ball–cloth sliding friction
+    muR: 0.0080,     // ball–cloth rolling resistance (heated carom cloth)
+    spinDec: 10.0,   // z-spin (sidespin) deceleration on cloth, rad/s^2
+    eBall: 0.94,     // ball–ball restitution
+    eCush: 0.93,     // ball–cushion restitution (along contact normal)
+    muCush: 0.20,    // ball–cushion sliding friction
+    hCush: 0.037,    // cushion nose height above bed (37 mm)
+    cueM: 0.51,      // cue mass
+    eTip: 0.75,      // leather tip restitution
+    endMass: 0.010,  // effective cue end mass (squirt)
+    dt: 0.0004,
+    maxT: 40,
+  };
+
+  // Ball–ball friction vs slip speed (Alciatore throw data fit)
+  function bbFric(v) { return 9.951e-3 + 0.108 * Math.exp(-1.088 * v); }
+
+  function cross(a, b) {
+    return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  }
+
+  function makeBall(id, x, y) {
+    return { id, x, y, vx: 0, vy: 0, wx: 0, wy: 0, wz: 0, q: [1, 0, 0, 0] };
+  }
+
+  function cloneBalls(balls) {
+    return balls.map(b => ({ id: b.id, x: b.x, y: b.y, vx: b.vx, vy: b.vy, wx: b.wx, wy: b.wy, wz: b.wz, q: b.q.slice() }));
+  }
+
+  // ---- Cue strike ----
+  // phi: aim direction (rad), V0: cue speed (m/s), a: side offset / R (+ = right english),
+  // b: vertical offset / R (+ = top), elevDeg: cue elevation (deg).
+  function strike(ball, p, phi, V0, a, b, elevDeg) {
+    const R = p.R, m = p.m, I = 0.4 * m * R * R;
+    const th = (elevDeg || 0) * Math.PI / 180;
+    const dx = Math.cos(phi), dy = Math.sin(phi);
+    const ct = Math.cos(th), st = Math.sin(th);
+    const u = [ct * dx, ct * dy, -st];          // cue axis (into ball)
+    const rh = [dy, -dx, 0];                     // right vector (d × z)
+    const eh = [st * dx, st * dy, ct];           // "up" perpendicular to cue axis
+    const J = (1 + p.eTip) * V0 * m / (1 + m / p.cueM + 2.5 * (a * a + b * b));
+    let vx = J / m * u[0], vy = J / m * u[1];
+    const t1 = cross(rh, u), t2 = cross(eh, u);
+    const k = J * R / I;
+    ball.wx = k * (a * t1[0] + b * t2[0]);
+    ball.wy = k * (a * t1[1] + b * t2[1]);
+    ball.wz = k * (a * t1[2] + b * t2[2]);
+    // Squirt (cue-ball deflection) – opposite side to english
+    const aa = Math.max(-0.99, Math.min(0.99, a));
+    const alpha = Math.atan(2.5 * aa * Math.sqrt(1 - aa * aa) / (1 + m / p.endMass + 2.5 * (1 - aa * aa)));
+    const ca = Math.cos(alpha), sa = Math.sin(alpha);
+    ball.vx = vx * ca - vy * sa;
+    ball.vy = vx * sa + vy * ca;
+    return { J, squirtDeg: alpha * 180 / Math.PI, speed: Math.hypot(ball.vx, ball.vy) };
+  }
+
+  // ---- Ball on cloth ----
+  function cloth(b, dt, p) {
+    const R = p.R, g = p.g;
+    let t = dt;
+    const ux = b.vx - R * b.wy, uy = b.vy + R * b.wx;
+    const us = Math.hypot(ux, uy);
+    if (us > 1e-7) {
+      const ac = p.muS * g;
+      const ts = 2 * us / (7 * ac);
+      const h = Math.min(t, ts);
+      const ex = ux / us, ey = uy / us;
+      const vx0 = b.vx, vy0 = b.vy;
+      b.vx -= ac * ex * h; b.vy -= ac * ey * h;
+      const kk = 5 * ac / (2 * R);
+      b.wx -= kk * ey * h; b.wy += kk * ex * h;
+      b.x += 0.5 * (vx0 + b.vx) * h; b.y += 0.5 * (vy0 + b.vy) * h;
+      t -= h;
+      if (h >= ts) { b.wy = b.vx / R; b.wx = -b.vy / R; }
+    }
+    if (t > 1e-12) {
+      const sp = Math.hypot(b.vx, b.vy);
+      if (sp > 0) {
+        const dec = p.muR * g;
+        if (sp <= dec * t) {
+          const tt = sp / dec;
+          b.x += 0.5 * b.vx * tt; b.y += 0.5 * b.vy * tt;
+          b.vx = b.vy = 0; b.wx = b.wy = 0;
+        } else {
+          const f = (sp - dec * t) / sp;
+          const vx0 = b.vx, vy0 = b.vy;
+          b.vx *= f; b.vy *= f;
+          b.x += 0.5 * (vx0 + b.vx) * t; b.y += 0.5 * (vy0 + b.vy) * t;
+          b.wy = b.vx / R; b.wx = -b.vy / R;
+        }
+      } else { b.wx = b.wy = 0; }
+    }
+    if (b.wz !== 0) {
+      const d = p.spinDec * dt;
+      b.wz = Math.abs(b.wz) <= d ? 0 : b.wz - Math.sign(b.wz) * d;
+    }
+  }
+
+  // ---- Ball–cushion impulse (rigid cushion, contact above centre; Han 2005-type) ----
+  // n: outward wall normal (unit, horizontal)
+  function cushion(b, p, nx, ny) {
+    const R = p.R, m = p.m, I = 0.4 * m * R * R;
+    // local frame: X = outward normal, Y = z × X, Z = up
+    const yx = -ny, yy = nx;
+    const v = [b.vx * nx + b.vy * ny, b.vx * yx + b.vy * yy, 0];
+    const w = [b.wx * nx + b.wy * ny, b.wx * yx + b.wy * yy, b.wz];
+    const sT = Math.max(-0.9, Math.min(0.9, (p.hCush - R) / R)), cT = Math.sqrt(1 - sT * sT);
+    const r = [R * cT, 0, R * sT];
+    const d = [cT, 0, sT];
+    const wr = cross(w, r);
+    const vc = [v[0] + wr[0], v[1] + wr[1], v[2] + wr[2]];
+    const c = vc[0] * d[0] + vc[1] * d[1] + vc[2] * d[2];
+    if (c <= 0) return false;
+    // english relative to travel along the rail: reverse if spin surface speed adds to tangential slip
+    const rev = Math.abs(w[2]) > 2 && Math.abs(v[1]) > 0.05 && (v[1] * w[2] > 0);
+    const run = Math.abs(w[2]) > 2 && Math.abs(v[1]) > 0.05 && (v[1] * w[2] < 0);
+    const Jn = (1 + p.eCush) * m * c;
+    const sl = [vc[0] - c * d[0], vc[1] - c * d[1], vc[2] - c * d[2]];
+    const s = Math.hypot(sl[0], sl[1], sl[2]);
+    const A = 3.5 / m;
+    let Jt = [0, 0, 0];
+    if (s > 1e-9) {
+      const need = s / A;
+      const mag = Math.min(need, p.muCush * Jn);
+      Jt = [-mag * sl[0] / s, -mag * sl[1] / s, -mag * sl[2] / s];
+    }
+    const P = [-Jn * d[0] + Jt[0], -Jn * d[1] + Jt[1], -Jn * d[2] + Jt[2]];
+    v[0] += P[0] / m; v[1] += P[1] / m;
+    const rp = cross(r, P);
+    w[0] += rp[0] / I; w[1] += rp[1] / I; w[2] += rp[2] / I;
+    b.vx = v[0] * nx + v[1] * yx; b.vy = v[0] * ny + v[1] * yy;
+    b.wx = w[0] * nx + w[1] * yx; b.wy = w[0] * ny + w[1] * yy; b.wz = w[2];
+    return { rev, run };
+  }
+
+  // ---- Ball–cushion impact, numerical model (Mathavan et al. 2010 type) ----
+  // Integrates the impact over small normal-impulse steps: cushion friction at the contact above the
+  // centre AND table friction under the ball (the cushion pushes the ball down into the cloth),
+  // slip directions updated every step (so sliding can turn into sticking mid-impact),
+  // compression until the contact stops approaching, then restitution until the energetic COR is met.
+  function cushionNum(b, p, nx, ny) {
+    const R = p.R, m = p.m, I = 0.4 * m * R * R;
+    const yx = -ny, yy = nx;
+    let vx = b.vx * nx + b.vy * ny, vy = b.vx * yx + b.vy * yy;
+    let wx = b.wx * nx + b.wy * ny, wy = b.wx * yx + b.wy * yy, wz = b.wz;
+    const sT = Math.max(-0.9, Math.min(0.9, (p.hCush - R) / R)), cT = Math.sqrt(1 - sT * sT);
+    const rI = [R * cT, 0, R * sT];
+    const contact = () => { // velocity of ball surface at cushion contact I and table contact C
+      const vI = [vx + (wy * rI[2] - wz * rI[1]), vy + (wz * rI[0] - wx * rI[2]), (wx * rI[1] - wy * rI[0])];
+      const vC = [vx - R * wy, vy + R * wx];
+      return { vI, vC };
+    };
+    let { vI } = contact();
+    const c0 = vI[0] * cT + vI[2] * sT;
+    if (c0 <= 0) return false;
+    const rev = Math.abs(wz) > 2 && Math.abs(vy) > 0.05 && (vy * wz > 0);
+    const run = Math.abs(wz) > 2 && Math.abs(vy) > 0.05 && (vy * wz < 0);
+    const N = 400, dP = m * c0 / N, A = 3.5 / m;
+    let Wc = 0, Wr = 0, phase = 0;
+    for (let it = 0; it < 20 * N; it++) {
+      const { vI, vC } = contact();
+      const c = vI[0] * cT + vI[2] * sT;
+      if (phase === 0 && c <= 0) phase = 1;
+      if (phase === 1 && Wr >= p.eCush * p.eCush * Wc) break;
+      if (phase === 0) Wc += c * dP; else Wr += -c * dP;
+      // cushion friction (tangent plane at I)
+      const s = [vI[0] - c * cT, vI[1], vI[2] - c * sT];
+      const sm = Math.hypot(s[0], s[1], s[2]);
+      let fI = [0, 0, 0];
+      if (sm > 1e-9) { const k = Math.min(p.muCush * dP, sm / A) / sm; fI = [-k * s[0], -k * s[1], -k * s[2]]; }
+      const FN = [-dP * cT, 0, -dP * sT];
+      // table reaction keeps the ball on the cloth
+      const dPC = Math.max(0, -(FN[2] + fI[2]));
+      const scm = Math.hypot(vC[0], vC[1]);
+      let fC = [0, 0];
+      if (scm > 1e-9) { const k = Math.min(p.muS * dPC, scm / A) / scm; fC = [-k * vC[0], -k * vC[1]]; }
+      vx += (FN[0] + fI[0] + fC[0]) / m; vy += (FN[1] + fI[1] + fC[1]) / m;
+      const Fi = [FN[0] + fI[0], FN[1] + fI[1], FN[2] + fI[2]];
+      // torques: rI × Fi + rC × fC  (rC = (0,0,-R))
+      wx += ((rI[1] * Fi[2] - rI[2] * Fi[1]) + (R * fC[1])) / I;
+      wy += ((rI[2] * Fi[0] - rI[0] * Fi[2]) + (-R * fC[0])) / I;
+      wz += (rI[0] * Fi[1] - rI[1] * Fi[0]) / I;
+    }
+    b.vx = vx * nx + vy * yx; b.vy = vx * ny + vy * yy;
+    b.wx = wx * nx + wy * yx; b.wy = wx * ny + wy * yy; b.wz = wz;
+    return { rev, run };
+  }
+
+  // ---- Ball–ball impulse with surface friction (throw, spin transfer) ----
+  function ballBall(bi, bj, p) {
+    const R = p.R, m = p.m, I = 0.4 * m * R * R;
+    let nx = bj.x - bi.x, ny = bj.y - bi.y;
+    const dist = Math.hypot(nx, ny) || 1e-9;
+    nx /= dist; ny /= dist;
+    const n = [nx, ny, 0];
+    const ri = [R * nx, R * ny, 0], rj = [-R * nx, -R * ny, 0];
+    const wi = [bi.wx, bi.wy, bi.wz], wj = [bj.wx, bj.wy, bj.wz];
+    const a1 = cross(wi, ri), a2 = cross(wj, rj);
+    const gx = (bi.vx + a1[0]) - (bj.vx + a2[0]);
+    const gy = (bi.vy + a1[1]) - (bj.vy + a2[1]);
+    const gz = a1[2] - a2[2];
+    const gn = gx * nx + gy * ny;
+    if (gn <= 0) return false;
+    const Jn = (1 + p.eBall) * m * 0.5 * gn;
+    const tx = gx - gn * nx, ty = gy - gn * ny, tz = gz;
+    const s = Math.hypot(tx, ty, tz);
+    let Jt = [0, 0, 0];
+    if (s > 1e-9) {
+      const mag = Math.min(bbFric(s) * Jn, m * s / 7);
+      Jt = [-mag * tx / s, -mag * ty / s, -mag * tz / s];
+    }
+    const Pi = [-Jn * nx + Jt[0], -Jn * ny + Jt[1], Jt[2]];
+    const Pj = [-Pi[0], -Pi[1], -Pi[2]];
+    bi.vx += Pi[0] / m; bi.vy += Pi[1] / m;
+    bj.vx += Pj[0] / m; bj.vy += Pj[1] / m;
+    const ti = cross(ri, Pi), tj = cross(rj, Pj);
+    bi.wx += ti[0] / I; bi.wy += ti[1] / I; bi.wz += ti[2] / I;
+    bj.wx += tj[0] / I; bj.wy += tj[1] / I; bj.wz += tj[2] / I;
+    return true;
+  }
+
+  function moving(b) { return b.vx !== 0 || b.vy !== 0 || b.wx !== 0 || b.wy !== 0; }
+
+  function integrateQ(b, dt) {
+    const wx = b.wx, wy = b.wy, wz = b.wz;
+    const wm = Math.hypot(wx, wy, wz);
+    if (wm < 1e-9) return;
+    const ang = wm * dt, s = Math.sin(ang / 2) / wm, c = Math.cos(ang / 2);
+    const dq = [c, wx * s, wy * s, wz * s];
+    const q = b.q;
+    const r = [
+      dq[0] * q[0] - dq[1] * q[1] - dq[2] * q[2] - dq[3] * q[3],
+      dq[0] * q[1] + dq[1] * q[0] + dq[2] * q[3] - dq[3] * q[2],
+      dq[0] * q[2] - dq[1] * q[3] + dq[2] * q[0] + dq[3] * q[1],
+      dq[0] * q[3] + dq[1] * q[2] - dq[2] * q[1] + dq[3] * q[0],
+    ];
+    const nn = Math.hypot(r[0], r[1], r[2], r[3]);
+    b.q = [r[0] / nn, r[1] / nn, r[2] / nn, r[3] / nn];
+  }
+
+  // ---- Simulation ----
+  // opts: { record: bool, frameDt, stopWhen(events, balls, t) -> bool }
+  function simulate(ballsIn, p, table, opts) {
+    opts = opts || {};
+    const balls = cloneBalls(ballsIn);
+    const R = p.R, L = table.L, W = table.W, dt = p.dt;
+    const events = [];
+    const frames = [];
+    const frameDt = opts.frameDt || 1 / 120;
+    let nextFrame = 0;
+    let t = 0;
+    const lastCush = balls.map(() => ({}));
+    const rec = !!opts.record;
+    const snap = () => frames.push({ t, b: balls.map(b => [b.x, b.y, b.q[0], b.q[1], b.q[2], b.q[3], b.vx, b.vy, b.wx, b.wy, b.wz]) });
+    if (rec) { snap(); nextFrame = frameDt; }
+    while (t < p.maxT) {
+      let any = false;
+      for (const b of balls) {
+        if (moving(b)) { any = true; cloth(b, dt, p); }
+        else if (b.wz !== 0) cloth(b, dt, p);
+        if (rec) integrateQ(b, dt);
+      }
+      t += dt;
+      if (!any) break;
+      // cushions with backtracking to exact contact
+      for (const b of balls) {
+        if (b.vx === 0 && b.vy === 0) continue;
+        for (let k = 0; k < 2; k++) {
+          let hit = null;
+          if (b.x < R && b.vx < 0) hit = ['L', -1, 0, (R - b.x) / -b.vx];
+          else if (b.x > L - R && b.vx > 0) hit = ['R', 1, 0, (b.x - (L - R)) / b.vx];
+          if (b.y < R && b.vy < 0) { const tt = (R - b.y) / -b.vy; if (!hit || tt > hit[3]) hit = ['B', 0, -1, tt]; }
+          else if (b.y > W - R && b.vy > 0) { const tt = (b.y - (W - R)) / b.vy; if (!hit || tt > hit[3]) hit = ['T', 0, 1, tt]; }
+          if (!hit) break;
+          const tau = Math.min(hit[3], dt);
+          b.x -= b.vx * tau; b.y -= b.vy * tau;
+          const cr = (p.cushionModel === 'han' ? cushion : cushionNum)(b, p, hit[1], hit[2]);
+          if (cr) {
+            const lc = lastCush[b.id];
+            if (!(lc[hit[0]] !== undefined && t - lc[hit[0]] < 0.02)) events.push({ t: t - tau, k: 'c', i: b.id, w: hit[0], rev: cr.rev, run: cr.run, x: b.x, y: b.y });
+            lc[hit[0]] = t;
+          }
+          b.x += b.vx * tau; b.y += b.vy * tau;
+          b.x = Math.min(L - R, Math.max(R, b.x));
+          b.y = Math.min(W - R, Math.max(R, b.y));
+        }
+      }
+      // ball–ball with backtracking
+      for (let pass = 0; pass < 3; pass++) {
+        let found = false;
+        for (let i = 0; i < balls.length; i++) for (let j = i + 1; j < balls.length; j++) {
+          const bi = balls[i], bj = balls[j];
+          const dx = bj.x - bi.x, dy = bj.y - bi.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 >= 4 * R * R) continue;
+          const dvx = bj.vx - bi.vx, dvy = bj.vy - bi.vy;
+          if (dx * dvx + dy * dvy >= 0) continue; // separating
+          const A = dvx * dvx + dvy * dvy;
+          const B = -2 * (dx * dvx + dy * dvy);
+          const C = d2 - 4 * R * R;
+          let tau = A > 1e-12 ? (-B + Math.sqrt(Math.max(0, B * B - 4 * A * C))) / (2 * A) : 0;
+          tau = Math.min(Math.max(tau, 0), dt);
+          bi.x -= bi.vx * tau; bi.y -= bi.vy * tau; bj.x -= bj.vx * tau; bj.y -= bj.vy * tau;
+          if (ballBall(bi, bj, p)) { events.push({ t: t - tau, k: 'b', i: bi.id, j: bj.id, x: bi.x, y: bi.y, x2: bj.x, y2: bj.y }); found = true; }
+          bi.x += bi.vx * tau; bi.y += bi.vy * tau; bj.x += bj.vx * tau; bj.y += bj.vy * tau;
+          // resolve residual overlap
+          const ex = bj.x - bi.x, ey = bj.y - bi.y, ed = Math.hypot(ex, ey);
+          if (ed < 2 * R && ed > 0) {
+            const push = (2 * R - ed) / 2 + 1e-7;
+            bi.x -= ex / ed * push; bi.y -= ey / ed * push; bj.x += ex / ed * push; bj.y += ey / ed * push;
+          }
+        }
+        if (!found) break;
+      }
+      if (rec && t >= nextFrame) { snap(); nextFrame += frameDt; }
+      if (opts.stopWhen && opts.stopWhen(events, balls, t)) break;
+    }
+    if (rec) snap();
+    return { balls, events, frames, t };
+  }
+
+  // ---- Rules ----
+  // mode '3c': cue=0, objects 1,2. mode '4b': cue=0, opponent=1, reds=2,3.
+  function evaluate(mode, events, cue) {
+    cue = cue || 0;
+    const seq = []; // cue ball sequence: 'c:W' or 'b:id'
+    for (const e of events) {
+      if (e.k === 'c' && e.i === cue) seq.push({ t: 'c', w: e.w });
+      else if (e.k === 'b' && (e.i === cue || e.j === cue)) seq.push({ t: 'b', id: e.i === cue ? e.j : e.i });
+    }
+    if (mode === '3c') {
+      const hit = []; let c = 0, before = [];
+      for (const s of seq) {
+        if (s.t === 'c') { if (hit.length < 2) { c++; before.push(s.w); } }
+        else if (!hit.includes(s.id)) { hit.push(s.id); if (hit.length === 2) break; }
+      }
+      const ok = hit.length === 2 && c >= 3;
+      let msg;
+      if (ok) msg = '득점!';
+      else if (hit.length === 0) msg = '헛맞음 (적구 미스)';
+      else if (hit.length === 1) msg = '2적구 미스';
+      else msg = '쿠션 부족 (' + c + '쿠션)';
+      return { ok, msg, cushions: c, hit, seq, before, decided: hit.length === 2 };
+    } else {
+      const hit = []; let foul = false;
+      const opp = cue === 0 ? 1 : 0;
+      for (const s of seq) {
+        if (s.t === 'b') {
+          if (s.id === opp) foul = true;
+          else if (!hit.includes(s.id)) hit.push(s.id);
+        }
+      }
+      const ok = !foul && hit.length === 2;
+      let msg = ok ? '득점!' : foul ? '파울 (상대공 접촉)' : hit.length === 0 ? '헛맞음' : '2적구 미스';
+      return { ok, msg, hit, seq, foul, decided: foul };
+    }
+  }
+
+  function stopper(mode, cue) {
+    return (events, balls, t) => {
+      const ev = evaluate(mode, events, cue);
+      if (mode === '3c') {
+        if (ev.decided) return true;
+      } else if (ev.foul) return true;
+      // the shot is over for the cue ball once it stops
+      return !moving(balls[cue]);
+    };
+  }
+
+  function wallKind(w) { return (w === 'B' || w === 'T') ? '장' : '단'; }
+
+  function seqString(ev, names) {
+    const out = [];
+    for (const s of ev.seq) {
+      if (s.t === 'c') out.push(wallKind(s.w));
+      else out.push(names[s.id] || ('공' + s.id));
+    }
+    return out;
+  }
+
+  const api = { cushionNum, DEFAULTS, makeBall, cloneBalls, strike, simulate, evaluate, stopper, seqString, wallKind, cushion, ballBall, cloth };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Carom = api;
+})(this);
+
+const PRESETS = [{"id":"break","mode":"3c","name":"초구 (첫 공)","desc":"빨강은 풋 스팟, 노랑은 헤드 스팟, 흰 공은 그 옆 15.24cm. 빨강을 약 1/2 두께로 맞혀 장→단→장 후 노랑.","table":"big","balls":[[2,1.5707],[2,2],[6,2]],"phi":6.313,"a":0.2,"b":0.2,"V":2.8,"elev":0,"width":0.45},{"id":"dwi","mode":"3c","name":"뒤돌리기","desc":"1적구를 맞힌 수구가 1적구 뒤쪽 장쿠션 → 단쿠션 → 반대편 장쿠션을 돌아 2적구로.","table":"big","balls":[[4.6,1.6],[2.036,1.576],[3,3]],"phi":137.303,"a":-0.4,"b":0,"V":3.2,"elev":0,"width":0.52},{"id":"ap2","mode":"3c","name":"앞돌리기","desc":"수구가 1적구 앞(코너 쪽)으로 빠져 단쿠션을 먼저 맞고 장 → 단으로 돌아옴.","table":"big","balls":[[3,1.4],[7.232,2.777],[1.2,2.8]],"phi":143.742,"a":0.2,"b":0.2,"V":2.4,"elev":0,"width":0.94},{"id":"yeop","mode":"3c","name":"옆돌리기","desc":"단쿠션 가까이 있는 1적구를 두껍게 맞혀 옆으로 빠진 수구가 장 → 단 → 장.","table":"big","balls":[[3,1.2],[1.948,1.007],[1.3,2]],"phi":152.265,"a":0,"b":0.2,"V":3,"elev":0,"width":1.84},{"id":"daehoe","mode":"3c","name":"대회전","desc":"테이블을 크게 한 바퀴 도는 길. 힘과 회전으로 길이를 맞추는 공.","table":"big","balls":[[4.6,1.6],[0.882,0.685],[6.6,0.9]],"phi":-15.96,"a":-0.2,"b":0.2,"V":3.2,"elev":0,"width":0.88},{"id":"bitgyeo","mode":"3c","name":"빗겨치기","desc":"1적구를 얇게(약 1/3) 빗겨 맞히고 수구가 거의 그대로 진행해 장 → 단 → 장.","table":"big","balls":[[2,1.6],[5.69,1.526],[4.6,2.6]],"phi":23.503,"a":0,"b":0.2,"V":2.6,"elev":0,"width":0.44},{"id":"hoengdan","mode":"3c","name":"횡단샷 (가로지르기)","desc":"수구가 양쪽 장쿠션을 오가며 테이블을 가로질러 2적구로.","table":"big","balls":[[4,0.6],[1.822,3.227],[3.2,2]],"phi":116.656,"a":-0.2,"b":0.2,"V":2.6,"elev":0,"width":0.56},{"id":"rv41","mode":"3c","name":"리버스 (역회전)","desc":"첫 쿠션에서 진행 방향과 반대 회전이 걸려 각이 짧게 꺾이는 공.","table":"big","balls":[[6,1.2],[6.674,1.665],[6.8,2.6]],"phi":62.082,"a":0.45,"b":0.2,"V":2.6,"elev":0,"width":0.98},{"id":"kkeul3","mode":"3c","name":"끌어치기 3쿠션","desc":"하단 당점으로 수구를 끌어와 장 → 단 → 장.","table":"big","balls":[[3,2],[3.611,3.655],[4.4,2.6]],"phi":20.601,"a":0.3,"b":-0.5,"V":4.2,"elev":0,"width":0.28},{"id":"mil3","mode":"3c","name":"밀어치기 3쿠션","desc":"상단 당점으로 두껍게 밀어 수구가 1적구를 따라 나간 뒤 장 → 단 → 장.","table":"big","balls":[[2,1.4],[5.481,1.642],[3.2,2.2]],"phi":34.368,"a":0.4,"b":0.4,"V":3.2,"elev":0,"width":0.96},{"id":"onebank","mode":"3c","name":"원뱅크 (빈쿠션 1회)","desc":"장쿠션을 먼저 맞히고 1적구 → 장 → 단 → 2적구.","table":"big","balls":[[2,1],[7.264,0.617],[4.6,1.3]],"phi":63.83,"a":0,"b":0,"V":2.6,"elev":0,"width":0.6},{"id":"threebank","mode":"3c","name":"쓰리뱅크 (빈쿠션 3회)","desc":"쿠션 3개를 먼저 맞힌 뒤 두 적구를 차례로 맞히는 공.","table":"big","balls":[[2.4,0.8],[3.098,2.358],[5.8,2]],"phi":49.91,"a":0,"b":0,"V":3.2,"elev":0,"width":0.64},{"id":"mil","mode":"4b","name":"밀어치기","desc":"상단 당점으로 빨강1을 두껍게 맞히면 수구가 따라가 빨강2.","table":"mid","balls":[[2,1.6],[6.4,3.4],[3.6,1.8],[4.711,2.823]],"phi":9.056,"a":0,"b":0.5,"V":1,"elev":0,"width":1.44},{"id":"kkeul","mode":"4b","name":"끌어치기","desc":"하단 당점으로 빨강1을 맞히면 수구가 뒤로 끌려와 빨강2.","table":"mid","balls":[[3.4,2],[6.6,0.6],[4.8,2.2],[4.631,1.903]],"phi":5.878,"a":0,"b":-0.55,"V":1.8,"elev":0,"width":2.76},{"id":"jukyeo","mode":"4b","name":"죽여치기","desc":"중단(또는 살짝 하단)으로 약하게 1/2 두께 → 수구가 접선 방향으로 짧게 빠짐.","table":"mid","balls":[[2.2,1.2],[6.6,3.4],[3.6,2],[3.865,3.121]],"phi":33.348,"a":0,"b":0,"V":0.8,"elev":0,"width":3.7},{"id":"bitgyeo4","mode":"4b","name":"빗겨치기 (얇게)","desc":"얇은 두께로 스치듯 맞혀 수구가 거의 직진.","table":"mid","balls":[[1.6,1.4],[6.6,3.4],[3.4,1.9],[3.907,2.795]],"phi":19.176,"a":0,"b":0.2,"V":1,"elev":0,"width":3},{"id":"cushion4","mode":"4b","name":"쿠션 걸어치기","desc":"빨강1을 맞힌 수구가 장쿠션을 한 번 맞고 빨강2로.","table":"mid","balls":[[2.6,1.5],[6.8,0.6],[4,3],[5.001,2.059]],"phi":48.77,"a":0.3,"b":0.2,"V":1.3,"elev":0,"width":2.46},{"id":"sineru","mode":"4b","name":"회전(시네루) 쿠션치기","desc":"강한 옆회전으로 쿠션을 맞은 수구가 회전 방향으로 크게 꺾임.","table":"mid","balls":[[3,2],[7,0.6],[4,3.2],[5.03,2.169]],"phi":52.506,"a":0.5,"b":0.2,"V":1.4,"elev":0,"width":2.62},{"id":"bincushion","mode":"4b","name":"빈쿠션 치기","desc":"상대공(노랑)이 길을 막아 쿠션을 먼저 맞히고 빨강1 → 빨강2.","table":"mid","balls":[[3,1],[4.1,1.1],[5.2,1.2],[5.161,0.853]],"phi":75.51,"a":0.3,"b":0.2,"V":1.2,"elev":0,"width":1.92},{"id":"masse","mode":"4b","name":"맛세이 (마세)","desc":"큐를 약 60° 세우고 옆 당점을 쳐 공이 휘어 상대공을 돌아감.","table":"mid","balls":[[3,1.6],[3.55,1.62],[4.4,1.75],[5.56,1.218]],"phi":-33.97,"a":-0.4,"b":-0.2,"V":1.8,"elev":60,"width":2.92}];
+(function(){
+'use strict';
+const C = window.Carom;
+const TABLES = { '3c': { L: 2.84, W: 1.42 }, '4b': { L: 2.54, W: 1.27 } };
+const COLORS3 = ['#f7f5ee', '#f3c623', '#d8262d'];
+const COLORS4 = ['#f7f5ee', '#f3c623', '#d8262d', '#d8262d'];
+const NAMES3 = ['흰 공', '노랑', '빨강'];
+const NAMES4 = ['흰 공', '노랑', '빨강1', '빨강2'];
+
+const S = {
+  mode: '3c', p: Object.assign({}, C.DEFAULTS), T: Object.assign({}, TABLES['3c']),
+  balls: [], undo: null, cue: 0,
+  phi: 0, a: 0, b: 0, V: 2.8, elev: 0,
+  pred: false, aimLine: true, trail: true, sys: false, sysInfo: null, cornerRef: 'diamond', game: null, place: false,
+  playing: null, // {res, t0, speed}
+  lastRes: null, predRes: null,
+  vertical: false, s: 1, ox: 0, oy: 0, cw: 0, ch: 0,
+};
+
+const $ = id => document.getElementById(id);
+const cv = $('tbl'), ctx = cv.getContext('2d');
+const sc = $('spin'), sx = sc.getContext('2d');
+
+// ---------- geometry / layout ----------
+function u() { return S.T.L / 8; }
+function layout() {
+  const side = $('side'), hdr = document.querySelector('header');
+  const sideW = side.getBoundingClientRect().width || 124;
+  const availW = Math.min(window.innerWidth, 1200) - sideW - 24;
+  const hud = $('gameHud'), nh = $('netHud');
+  const availH = window.innerHeight - hdr.getBoundingClientRect().height - (hud.offsetHeight ? hud.offsetHeight + 6 : 0) - (nh.offsetHeight ? nh.offsetHeight + 6 : 0) - 10;
+  const railPx = 0.085;
+  const totL = S.T.L + 2 * railPx, totW = S.T.W + 2 * railPx;
+  const sV = Math.min(availW / totW, availH / totL);   // table drawn vertically
+  const sH = Math.min(availW / totL, availH / totW);   // table drawn horizontally
+  S.vertical = sV > sH;
+  const s = Math.max(sV, sH);
+  const w = S.vertical ? totW * s : totL * s, h = S.vertical ? totL * s : totW * s;
+  const dpr = window.devicePixelRatio || 1;
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  S.s = s; S.cw = w; S.ch = h; S.rail = railPx;
+}
+function toScr(x, y) {
+  const r = S.rail;
+  if (S.vertical) return [(r + (S.T.W - y)) * S.s, (r + (S.T.L - x)) * S.s];   // 90° rotation (no mirroring)
+  return [(r + x) * S.s, (r + (S.T.W - y)) * S.s];
+}
+function toWorld(px, py) {
+  const r = S.rail;
+  if (S.vertical) return [S.T.L - (py / S.s - r), S.T.W - (px / S.s - r)];
+  return [px / S.s - r, S.T.W - (py / S.s - r)];
+}
+// world direction vector -> screen vector (unit scale)
+function dirScr(dx, dy) { return S.vertical ? [-dy, -dx] : [dx, -dy]; }
+
+// ---------- balls ----------
+function names() { return S.mode === '3c' ? NAMES3 : NAMES4; }
+function colors() { return S.mode === '3c' ? COLORS3 : COLORS4; }
+function setBallsDiamond(arr) {
+  S.balls = arr.map((xy, i) => C.makeBall(i, xy[0] * u(), xy[1] * u()));
+}
+function defaultLayout() {
+  if (S.mode === '3c') setBallsDiamond([[2, 2 - 0.4293], [2, 2], [6, 2]]);
+  else setBallsDiamond([[2, 1.5], [2, 2.5], [6, 2], [5, 2.6]]);
+}
+
+// ---------- spin picker ----------
+const MAXOFF = 0.6;
+function drawSpin() {
+  const W = sc.width, H = sc.height, cx = W / 2, cy = H / 2, r = W * 0.46;
+  sx.clearRect(0, 0, W, H);
+  const g = sx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, r * 0.1, cx, cy, r);
+  const col = colors()[S.cue];
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.7, col); g.addColorStop(1, '#8c8c8c');
+  sx.fillStyle = g; sx.beginPath(); sx.arc(cx, cy, r, 0, 7); sx.fill();
+  sx.strokeStyle = 'rgba(0,0,0,.35)'; sx.lineWidth = 2;
+  for (const k of [0.2, 0.4, 0.6]) { sx.beginPath(); sx.arc(cx, cy, r * k, 0, 7); sx.stroke(); }
+  sx.beginPath(); sx.moveTo(cx - r, cy); sx.lineTo(cx + r, cy); sx.moveTo(cx, cy - r); sx.lineTo(cx, cy + r); sx.stroke();
+  sx.fillStyle = 'rgba(0,0,0,.45)'; sx.font = '600 20px sans-serif'; sx.textAlign = 'center';
+  sx.fillText('1', cx + r * 0.2 - 8, cy - 6); sx.fillText('2', cx + r * 0.4 - 8, cy - 6); sx.fillText('3', cx + r * 0.6 - 8, cy - 6);
+  // natural roll line
+  sx.setLineDash([6, 6]); sx.strokeStyle = 'rgba(30,120,60,.7)'; sx.beginPath(); sx.arc(cx, cy, r * 0.4, Math.PI * 1.15, Math.PI * 1.85); sx.stroke(); sx.setLineDash([]);
+  const px = cx + S.a * r, py = cy - S.b * r;
+  sx.fillStyle = '#1565c0'; sx.strokeStyle = '#fff'; sx.lineWidth = 3;
+  sx.beginPath(); sx.arc(px, py, r * 0.11, 0, 7); sx.fill(); sx.stroke();
+  const tip = v => (Math.abs(v) / 0.2).toFixed(1).replace(/\.0$/, '');
+  const side = S.a > 0.005 ? '우 ' + tip(S.a) + '팁' : S.a < -0.005 ? '좌 ' + tip(S.a) + '팁' : '좌우 중앙';
+  const ver = S.b > 0.005 ? '상 ' + tip(S.b) + '팁' : S.b < -0.005 ? '하 ' + tip(S.b) + '팁' : '상하 중앙';
+  $('spinRead').innerHTML = '<b>' + side + '</b><br><b>' + ver + '</b>';
+  if (typeof paintPad === 'function') paintPad();
+}
+function spinFromEvent(e) {
+  if (typeof netLocked === 'function' && netLocked()) return;
+  const rc = sc.getBoundingClientRect();
+  const r = rc.width * 0.46;
+  let a = (e.clientX - rc.left - rc.width / 2) / r, b = -(e.clientY - rc.top - rc.height / 2) / r;
+  const m = Math.hypot(a, b);
+  if (m > MAXOFF) { a *= MAXOFF / m; b *= MAXOFF / m; }
+  S.a = Math.round(a * 50) / 50; S.b = Math.round(b * 50) / 50;
+  drawSpin(); schedulePred();
+}
+let spinDrag = false;
+sc.addEventListener('pointerdown', e => { spinDrag = true; sc.setPointerCapture(e.pointerId); spinFromEvent(e); });
+sc.addEventListener('pointermove', e => { if (spinDrag) spinFromEvent(e); });
+sc.addEventListener('pointerup', () => spinDrag = false);
+// 당점 이동 패드: 손가락으로 공을 가리지 않게, 아래 패드에서 상대 이동(트랙패드처럼). 두 번 탭하면 중앙.
+const pad = $('spinPad'); let padDrag = null, lastTap = 0;
+const PAD_GAIN = 0.5;
+function paintPad() {
+  const w = pad.clientWidth || 116, h = pad.clientHeight || 116, r = w * 0.46;
+  const dot = pad.querySelector('.pc');
+  dot.style.left = (w / 2 + S.a / MAXOFF * r * 0.95 - 7) + 'px';
+  dot.style.top = (h / 2 - S.b / MAXOFF * r * 0.95 - 7) + 'px';
+}
+pad.addEventListener('pointerdown', e => {
+  if (typeof netLocked === 'function' && netLocked()) return;
+  const now = performance.now();
+  if (now - lastTap < 300) { S.a = 0; S.b = 0; drawSpin(); schedulePred(); lastTap = 0; return; }
+  lastTap = now;
+  pad.setPointerCapture(e.pointerId); pad.classList.add('on');
+  padDrag = { x: e.clientX, y: e.clientY, a: S.a, b: S.b };
+});
+pad.addEventListener('pointermove', e => {
+  if (!padDrag) return;
+  const r = pad.clientWidth * 0.46;
+  let a = padDrag.a + (e.clientX - padDrag.x) / r * PAD_GAIN, b = padDrag.b - (e.clientY - padDrag.y) / r * PAD_GAIN;
+  if (Math.hypot(e.clientX - padDrag.x, e.clientY - padDrag.y) > 6) lastTap = 0;
+  const m = Math.hypot(a, b);
+  if (m > MAXOFF) { a *= MAXOFF / m; b *= MAXOFF / m; }
+  S.a = Math.round(a * 100) / 100; S.b = Math.round(b * 100) / 100;
+  drawSpin(); schedulePred();
+});
+const padEnd = () => { padDrag = null; pad.classList.remove('on'); };
+pad.addEventListener('pointerup', padEnd); pad.addEventListener('pointercancel', padEnd);
+
+// ---------- readouts ----------
+function ballSpeedFor(V) {
+  const p = S.p, m = p.m;
+  return (1 + p.eTip) * V / (1 + m / p.cueM + 2.5 * (S.a * S.a + S.b * S.b)) * Math.cos(S.elev * Math.PI / 180);
+}
+function updReads() {
+  const vs = ballSpeedFor(S.V);
+  const lvl = S.V < 1.2 ? '약' : S.V < 2.4 ? '중약' : S.V < 3.4 ? '중' : S.V < 4.5 ? '중강' : '강';
+  $('vRead').textContent = '큐 ' + S.V.toFixed(2) + ' m/s · 수구 ' + vs.toFixed(2) + ' m/s (' + lvl + ')';
+  $('vShort').textContent = S.V.toFixed(2) + ' (' + lvl + ')';
+  $('eRead').textContent = S.elev + '°' + (S.elev >= 45 ? ' (맛세이)' : S.elev >= 15 ? ' (찍어치기)' : '');
+  $('power').value = S.V; $('elev').value = S.elev;
+  const pr = S.probe = probeShot();
+  let ang = ((S.phi * 180 / Math.PI) % 360 + 360) % 360;
+  let txt = '조준 <b>' + ang.toFixed(2) + '°</b>';
+  if (Math.abs(pr.squirt) >= 0.05) txt += ' · 스쿼트 <b>' + Math.abs(pr.squirt).toFixed(1) + '° ' + (S.a > 0 ? '왼쪽' : '오른쪽') + '</b>으로 밀림';
+  if (pr.hit && pr.hit.ball !== undefined) {
+    const th = pr.hit.thick;
+    const fr = [[1, '정면'], [7 / 8, '7/8'], [3 / 4, '3/4'], [2 / 3, '2/3'], [1 / 2, '1/2'], [1 / 3, '1/3'], [1 / 4, '1/4'], [1 / 8, '1/8'], [0, '스침']];
+    const nm = fr.reduce((p, c) => Math.abs(c[0] - th) < Math.abs(p[0] - th) ? c : p)[1];
+    txt += ' · ' + names()[pr.hit.ball] + ' 실제 두께 <b>' + (th * 100).toFixed(0) + '%</b> (≈' + nm + ')' + (pr.hit.side && th < 0.995 ? ' · 적구 ' + pr.hit.side + ' 면' : '');
+  } else if (pr.hit) txt += ' · 쿠션 먼저' + (S.sys ? ' (1쿠션 <b>' + railPoint(pr.hit.cushion, pr.hit.x, pr.hit.y) + 'P</b>)' : '');
+  $('aimRead').innerHTML = txt;
+}
+
+// ---------- simulation ----------
+function shotBalls(balls) {
+  const bs = C.cloneBalls(balls);
+  bs.forEach(b => { b.vx = b.vy = b.wx = b.wy = b.wz = 0; });
+  const info = C.strike(bs[S.cue], S.p, S.phi, S.V, S.a, S.b, S.elev);
+  return { bs, info };
+}
+// Simulate the cue ball only until its first contact (ball or cushion): includes squirt, swerve/massé curve and speed.
+function probeShot() {
+  const { bs, info } = shotBalls(S.balls);
+  const cue = S.cue;
+  const first = ev => ev.find(e => (e.k === 'c' && e.i === cue) || (e.k === 'b' && (e.i === cue || e.j === cue)));
+  const r = C.simulate(bs, S.p, S.T, { record: true, frameDt: 1 / 240, stopWhen: ev => !!first(ev) });
+  const e = first(r.events);
+  const path = r.frames.filter(f => !e || f.t <= e.t).map(f => [f.b[cue][0], f.b[cue][1]]);
+  const out = { path, squirt: info.squirtDeg, hit: null };
+  if (!e) return out;
+  if (e.k === 'c') { path.push([e.x, e.y]); out.hit = { cushion: e.w, x: e.x, y: e.y }; return out; }
+  const mine = e.i === cue;
+  const cx = mine ? e.x : e.x2, cy = mine ? e.y : e.y2;
+  const other = mine ? e.j : e.i;
+  path.push([cx, cy]);
+  // incoming cue-ball velocity just before contact
+  const before = r.frames.filter(f => f.t < e.t).pop() || r.frames[0];
+  const vx = before.b[cue][6], vy = before.b[cue][7], vm = Math.hypot(vx, vy) || 1;
+  const ob = S.balls[other];
+  const nx = ob.x - cx, ny = ob.y - cy, nm = Math.hypot(nx, ny) || 1;
+  const cr = (vx * ny - vy * nx) / (vm * nm);          // sin(cut angle), signed
+  const thick = Math.max(0, 1 - Math.abs(cr));
+  out.hit = { ball: other, x: cx, y: cy, thick, side: cr > 0.0005 ? '오른쪽' : cr < -0.0005 ? '왼쪽' : '' };
+  return out;
+}
+// Corner-through line (영상 속 '코너 관통 1적구선' 차트): corner -> obj1 -> opposite long rail.
+// Chart read from the reference image: landing distance (in diamonds, measured from the short rail at the
+// corner's end) -> side spin: 1→반팁, 2→1팁, 3→2팁, 3.5→3팁, 4→4팁 (linear in between).
+const TIP_CHART = [[0, 0], [1, 0.5], [2, 1], [3, 2], [3.5, 3], [4, 4]];
+function chartTip(d) {
+  if (d >= 4) return { tip: 4, over: d > 4.05 };
+  for (let i = 1; i < TIP_CHART.length; i++) {
+    const [x0, y0] = TIP_CHART[i - 1], [x1, y1] = TIP_CHART[i];
+    if (d <= x1) return { tip: y0 + (y1 - y0) * (d - x0) / (x1 - x0), over: false };
+  }
+}
+function cornerTool() {
+  const R = S.p.R, L = S.T.L, W = S.T.W;
+  let obj = S.probe && S.probe.hit && S.probe.hit.ball !== undefined ? S.probe.hit.ball : null;
+  if (obj === null) {
+    let bd = 1e9; const cb = S.balls[S.cue];
+    S.balls.forEach((o, i) => { if (i === S.cue || (S.mode === '4b' && i === (S.cue === 0 ? 1 : 0))) return; const d = Math.hypot(o.x - cb.x, o.y - cb.y); if (d < bd) { bd = d; obj = i; } });
+  }
+  const o = S.balls[obj];
+  const corners = [[0, 0], [L, 0], [0, W], [L, W]];
+  let best = null;
+  for (const c of corners) {
+    const dx = o.x - c[0], dy = o.y - c[1], dm = Math.hypot(dx, dy); if (dm < 1e-6 || Math.abs(dy) < 1e-6) continue;
+    const ux = dx / dm, uy = dy / dm;
+    const farY = c[1] < W / 2 ? W : 0;               // opposite long rail (cushion nose line)
+    const t = (farY - c[1]) / uy; if (t <= dm) continue;
+    const px = c[0] + ux * t; if (px < 0 || px > L) continue;
+    if (!best || dm < best.dm) best = { c, P: [px, farY], dm, obj, ux, uy };
+  }
+  if (!best) return null;
+  best.dist = Math.abs(best.P[0] - best.c[0]) / u();   // diamonds from the corner's short rail
+  const ct = chartTip(best.dist);
+  best.tip = ct.tip; best.over = ct.over;
+  // side: the english that runs along the corner's long rail for a ball travelling P -> corner
+  const n = best.c[1] < W / 2 ? [0, -1] : [0, 1];
+  const ly = [-n[1], n[0]];
+  const vly = -best.ux * ly[0] - best.uy * ly[1];
+  best.sign = vly > 0 ? -1 : 1;
+  best.Ppt = railPoint(best.P[1] > W / 2 ? 'T' : 'B', best.P[0], best.P[1]);
+  return best;
+}
+function updateSys() {
+  if (!S.sys) { S.sysInfo = null; return; }
+  const ci = S.sysInfo = cornerTool();
+  let txt;
+  if (!ci) txt = '이 배치에서는 코너→1적구→반대 장쿠션 선이 나오지 않아요.';
+  else {
+    const t = ci.tip < 0.05 ? '무회전' : (ci.sign > 0 ? '우 ' : '좌 ') + (ci.tip < 0.75 && ci.tip > 0.25 ? '반팁(' + ci.tip.toFixed(1) + ')' : ci.tip.toFixed(1) + '팁');
+    txt = names()[ci.obj] + ' 관통선이 반대 장쿠션 <b style="color:#7ee0a1">' + ci.dist.toFixed(1) + '칸 (' + ci.Ppt + 'P)</b>에 닿아요 → 차트 당점 <b style="color:#7ee0a1">' + t + (ci.over ? ' 이상' : '') + '</b>. 이 선을 1적구 옆면까지 평행 이동해 겨냥해요. <span style="opacity:.8">(영상 속 차트를 옮긴 참고값 — 실제 결과는 예상 경로로 확인)</span>';
+  }
+  $('sysCorner').innerHTML = txt;
+  $('sysApply').disabled = !ci;
+}
+function drawSys() {
+  const ci = S.sysInfo; if (!ci) return;
+  // tip chart labels along the opposite long rail, measured from the corner's short rail
+  const dirx = ci.c[0] < S.T.L / 2 ? 1 : -1;
+  const yy = ci.P[1] > S.T.W / 2 ? S.T.W - S.p.R * 2.6 : S.p.R * 2.6;
+  for (const [d, lab] of [[1, '반팁'], [2, '1팁'], [3, '2팁'], [3.5, '3팁'], [4, '4팁']]) {
+    const [px, py] = toScr(ci.c[0] + dirx * d * u(), yy);
+    ctx.font = '800 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(lab).width + 6;
+    ctx.fillStyle = 'rgba(200,30,40,.9)'; ctx.fillRect(px - tw / 2, py - 7, tw, 14);
+    ctx.fillStyle = '#fff'; ctx.fillText(lab, px, py + 0.5);
+  }
+  const a = toScr(ci.c[0], ci.c[1]), b = toScr(ci.P[0], ci.P[1]);
+  ctx.strokeStyle = 'rgba(80,230,140,.9)'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+  ctx.fillStyle = 'rgba(80,230,140,.95)'; ctx.beginPath(); ctx.arc(b[0], b[1], 4, 0, 7); ctx.fill();
+}
+function runShot(record) {
+  const { bs, info } = shotBalls(S.balls);
+  const r = C.simulate(bs, S.p, S.T, { record, frameDt: 1 / 120 });
+  r.ev = C.evaluate(S.mode, r.events, S.cue);
+  r.info = info;
+  return r;
+}
+let predTimer = null;
+function schedulePred() {
+  updReads();
+  if (S.net && typeof netSendAim === 'function') netSendAim();
+  if (S.playing) return;
+  clearTimeout(predTimer);
+  predTimer = setTimeout(() => { S.predRes = S.pred ? runShot(true) : null; updateSys(); draw(); }, 40);
+  draw();
+}
+
+// ---------- drawing ----------
+function qrot(q, v) {
+  const [w, x, y, z] = q;
+  const tx = 2 * (y * v[2] - z * v[1]), ty = 2 * (z * v[0] - x * v[2]), tz = 2 * (x * v[1] - y * v[0]);
+  return [v[0] + w * tx + (y * tz - z * ty), v[1] + w * ty + (z * tx - x * tz), v[2] + w * tz + (x * ty - y * tx)];
+}
+const AX = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+function drawBall(x, y, q, color, isCue) {
+  const [px, py] = toScr(x, y), r = S.p.R * S.s;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = r * 0.6; ctx.shadowOffsetX = r * 0.15; ctx.shadowOffsetY = r * 0.2;
+  const g = ctx.createRadialGradient(px - r * 0.35, py - r * 0.4, r * 0.1, px, py, r);
+  g.addColorStop(0, '#fff'); g.addColorStop(0.45, color); g.addColorStop(1, shade(color));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, r, 0, 7); ctx.fill();
+  ctx.restore();
+  // body-fixed spots to show rotation
+  const spot = color === '#f7f5ee' ? '#d8262d' : color === '#f3c623' ? '#1b4fb3' : '#ffffff';
+  for (const a of AX) {
+    const v = qrot(q, a);
+    if (v[2] <= 0.05) continue;
+    const d = dirScr(v[0], v[1]);
+    ctx.fillStyle = spot; ctx.globalAlpha = Math.min(1, v[2] * 1.4);
+    ctx.beginPath(); ctx.ellipse(px + d[0] * r * 0.82, py + d[1] * r * 0.82, r * 0.17 * Math.max(0.35, v[2]), r * 0.17, Math.atan2(d[1], d[0]), 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  if (isCue) { ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(px, py, r + 3, 0, 7); ctx.stroke(); }
+}
+function shade(c) {
+  const n = parseInt(c.slice(1), 16), r = (n >> 16) * 0.55, g = ((n >> 8) & 255) * 0.55, b = (n & 255) * 0.55;
+  return 'rgb(' + (r | 0) + ',' + (g | 0) + ',' + (b | 0) + ')';
+}
+function drawTable() {
+  const w = S.cw, h = S.ch, rp = S.rail * S.s;
+  ctx.clearRect(0, 0, w, h);
+  const wood = ctx.createLinearGradient(0, 0, w, h); wood.addColorStop(0, '#4a2d1a'); wood.addColorStop(1, '#2e1b0f');
+  ctx.fillStyle = wood; roundRect(0, 0, w, h, 10); ctx.fill();
+  // cushion strip
+  const ci = rp * 0.55;
+  ctx.fillStyle = '#16497f'; ctx.fillRect(ci, ci, w - 2 * ci, h - 2 * ci);
+  const cl = ctx.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, Math.max(w, h) * 0.7);
+  cl.addColorStop(0, '#2a6fbf'); cl.addColorStop(1, '#1a5799');
+  ctx.fillStyle = cl; ctx.fillRect(rp, rp, w - 2 * rp, h - 2 * rp);
+  // diamonds
+  ctx.fillStyle = '#e9e1cf';
+  for (let i = 0; i <= 8; i++) for (const yy of [-1, 1]) {
+    const x = i * u(); const yw = yy < 0 ? -S.rail * 0.72 : S.T.W + S.rail * 0.72;
+    const [px, py] = toScr(x, yw); diamond(px, py);
+  }
+  for (let j = 0; j <= 4; j++) for (const xx of [-1, 1]) {
+    const y = j * u(); const xw = xx < 0 ? -S.rail * 0.72 : S.T.L + S.rail * 0.72;
+    const [px, py] = toScr(xw, y); diamond(px, py);
+  }
+  // faint grid
+  ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1;
+  for (let i = 1; i < 8; i++) { const a = toScr(i * u(), 0), b = toScr(i * u(), S.T.W); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+  for (let j = 1; j < 4; j++) { const a = toScr(0, j * u()), b = toScr(S.T.L, j * u()); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+  if (S.sys) {
+    ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.font = '600 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const inset = S.p.R * 1.3;
+    for (let i = 0; i <= 8; i++) for (const yy of [inset, S.T.W - inset]) { if (i === 0 || i === 8) continue; const [px, py] = toScr(i * u(), yy); ctx.fillText(String(i * 10), px, py); }
+    for (let j = 1; j < 4; j++) for (const xx of [inset, S.T.L - inset]) { const [px, py] = toScr(xx, j * u()); ctx.fillText(String(j * 10), px, py); }
+    // half-diamond ticks
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) for (const yy of [0, S.T.W]) { const a = toScr((i + 0.5) * u(), yy), b = toScr((i + 0.5) * u(), yy + (yy ? -0.02 : 0.02)); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+    for (let j = 0; j < 4; j++) for (const xx of [0, S.T.L]) { const a = toScr(xx, (j + 0.5) * u()), b = toScr(xx + (xx ? -0.02 : 0.02), (j + 0.5) * u()); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+  }
+  // spots
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
+  for (const sp of [[2, 2], [4, 2], [6, 2]]) { const [px, py] = toScr(sp[0] * u(), sp[1] * u()); ctx.beginPath(); ctx.arc(px, py, 1.6, 0, 7); ctx.fill(); }
+}
+function diamond(px, py) { const d = Math.max(2.2, S.s * 0.009); ctx.beginPath(); ctx.moveTo(px, py - d); ctx.lineTo(px + d, py); ctx.lineTo(px, py + d); ctx.lineTo(px - d, py); ctx.fill(); }
+function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+function drawPaths(res, upto, alphaMain, dashed) {
+  const fr = res.frames; const n = upto === undefined ? fr.length : upto;
+  const cols = colors();
+  if (!fr.length || fr[0].b.length !== S.balls.length) return;
+  for (let i = 0; i < S.balls.length; i++) {
+    ctx.beginPath();
+    let started = false, lx = null, ly = null;
+    for (let k = 0; k < n; k++) {
+      const b = fr[k].b[i];
+      if (lx !== null && Math.abs(b[0] - lx) < 1e-6 && Math.abs(b[1] - ly) < 1e-6) continue;
+      const [px, py] = toScr(b[0], b[1]);
+      if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
+      lx = b[0]; ly = b[1];
+    }
+    const main = i === S.cue;
+    ctx.strokeStyle = main ? 'rgba(255,255,255,' + alphaMain + ')' : hexA(cols[i], alphaMain * 0.75);
+    ctx.lineWidth = main ? 2 : 1.4;
+    ctx.setLineDash(dashed ? [6, 5] : []);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+function hexA(c, a) { const n = parseInt(c.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
+function railPoint(w, x, y) { return Math.round(((w === 'B' || w === 'T') ? x : y) / u() * 10); }
+function drawMarkers(res, tMax) {
+  let k = 0;
+  const ev = res.ev;
+  // number cue-ball cushion hits before second object (or all for 4구)
+  for (const e of res.events) {
+    if (tMax !== undefined && e.t > tMax) break;
+    if (e.k === 'c' && e.i === S.cue) {
+      k++;
+      const [px, py] = toScr(e.x, e.y);
+      ctx.fillStyle = e.rev ? '#ff8a65' : '#ffffff';
+      ctx.beginPath(); ctx.arc(px, py, 8, 0, 7); ctx.fill();
+      ctx.fillStyle = '#111'; ctx.font = '700 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(k), px, py + 0.5);
+      if (S.sys) sysTag(px, py, railPoint(e.w, e.x, e.y) + 'P', e.w);
+    }
+  }
+}
+function sysTag(px, py, txt, w) {
+  // place label toward the table centre
+  const c = toScr(S.T.L / 2, S.T.W / 2);
+  let dx = c[0] - px, dy = c[1] - py; const m = Math.hypot(dx, dy) || 1;
+  const ax = Math.abs(dx) > Math.abs(dy) ? Math.sign(dx) : 0, ay = ax ? 0 : Math.sign(dy);
+  const tx = px + ax * 22, ty = py + ay * 18;
+  ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const tw = ctx.measureText(txt).width + 8;
+  ctx.fillStyle = 'rgba(10,30,60,.85)'; ctx.fillRect(tx - tw / 2, ty - 8, tw, 16);
+  ctx.fillStyle = '#7ee0a1'; ctx.fillText(txt, tx, ty + 0.5);
+}
+function drawAim() {
+  const cb = S.balls[S.cue], R = S.p.R;
+  const dx = Math.cos(S.phi), dy = Math.sin(S.phi);
+  const pr = S.probe;
+  if (S.aimLine && pr && pr.path.length > 1) {
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1.2; ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    pr.path.forEach((p, i) => { const q = toScr(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); });
+    ctx.stroke(); ctx.setLineDash([]);
+    if (pr.hit && pr.hit.ball !== undefined) {
+      const q = toScr(pr.hit.x, pr.hit.y);
+      ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.beginPath(); ctx.arc(q[0], q[1], R * S.s, 0, 7); ctx.stroke();
+    }
+  }
+  // cue stick
+  const back = 0.06 + S.V * 0.03, len = 1.1;
+  const s1 = toScr(cb.x - dx * (R + back), cb.y - dy * (R + back)), s2 = toScr(cb.x - dx * (R + back + len), cb.y - dy * (R + back + len));
+  const gr = ctx.createLinearGradient(s1[0], s1[1], s2[0], s2[1]); gr.addColorStop(0, '#e9dcc0'); gr.addColorStop(0.08, '#d9c39a'); gr.addColorStop(0.6, '#7a4a25'); gr.addColorStop(1, '#2b170b');
+  ctx.strokeStyle = gr; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(3, S.s * 0.012);
+  ctx.beginPath(); ctx.moveTo(s1[0], s1[1]); ctx.lineTo(s2[0], s2[1]); ctx.stroke(); ctx.lineCap = 'butt';
+}
+function draw() {
+  drawTable();
+  const cols = colors();
+  if (S.playing) {
+    const res = S.playing.res, fr = res.frames;
+    const k = Math.max(0, Math.min(fr.length - 1, Math.floor(S.playing.t / (1 / 120))));
+    if (S.trail) { drawPaths(res, k + 1, 0.8, false); drawMarkers(res, fr[k].t); }
+    fr[k].b.forEach((b, i) => drawBall(b[0], b[1], [b[2], b[3], b[4], b[5]], cols[i], i === S.cue));
+    return;
+  }
+  if (S.lastRes && S.trail) { drawPaths(S.lastRes, undefined, 0.45, false); drawMarkers(S.lastRes); }
+  if (S.predRes && S.pred && !S.lastRes) { drawPaths(S.predRes, undefined, 0.5, true); drawMarkers(S.predRes); }
+  if (!S.lastRes) drawAim();
+  if (S.sys && !S.lastRes) drawSys();
+  S.balls.forEach((b, i) => drawBall(b.x, b.y, b.q, cols[i], i === S.cue));
+}
+
+// ---------- status ----------
+function showResult(res) {
+  const ev = res.ev;
+  const el = $('res');
+  el.textContent = ev.ok ? '득점!' : ev.msg;
+  el.className = 'res ' + (ev.ok ? 'ok' : 'ng');
+  const seq = C.seqString(ev, names());
+  const extra = S.mode === '3c' ? ' · 2적구 전 쿠션 ' + ev.cushions + '개' : '';
+  $('seq').textContent = '경로: ' + (seq.length ? seq.join(' → ') : '없음') + extra + ' · 스쿼트 ' + res.info.squirtDeg.toFixed(1) + '°';
+}
+
+// ---------- play ----------
+function shoot() {
+  if (S.playing) return;
+  if (S.net) { netShoot(); return; }
+  if (S.game && S.game.over) return;
+  if (S.lastRes) commitLast();
+  const res = runShot(true);
+  S.undo = C.cloneBalls(S.balls);
+  S.playing = { res, t: 0, last: performance.now(), speed: +$('speed').value };
+  $('res').textContent = '…'; $('res').className = 'res'; $('seq').textContent = '';
+  requestAnimationFrame(tick);
+}
+function tick(now) {
+  const P = S.playing; if (!P) return;
+  const dt = Math.max(0, Math.min(0.05, (now - P.last) / 1000)); P.last = Math.max(P.last, now);
+  P.t += dt * P.speed;
+  const end = P.res.frames[P.res.frames.length - 1].t;
+  draw();
+  if (P.t >= end) { finish(); return; }
+  requestAnimationFrame(tick);
+}
+function finish() {
+  const res = S.playing.res;
+  const isBreak = S.playing.isBreak, onDone = S.playing.onDone;
+  S.playing = null;
+  const fin = res.frames[res.frames.length - 1].b;
+  S.balls.forEach((b, i) => { b.x = fin[i][0]; b.y = fin[i][1]; b.q = [fin[i][2], fin[i][3], fin[i][4], fin[i][5]]; });
+  if (onDone) { onDone(res); return; }
+  if (isBreak) { afterBreak(); return; }
+  S.lastRes = res;
+  showResult(res);
+  if (S.game) gameAfterShot(res);
+  draw();
+}
+function commitLast() { S.lastRes = null; schedulePred(); }
+
+// ---------- auto aim ----------
+function autoAim() {
+  if (S.playing) return;
+  if (S.lastRes) commitLast();
+  const base = S.phi * 180 / Math.PI;
+  const tryAt = deg => { const keep = S.phi; S.phi = deg * Math.PI / 180; const { bs } = shotBalls(S.balls); S.phi = keep; const r = C.simulate(bs, S.p, S.T, { stopWhen: C.stopper(S.mode, S.cue) }); return C.evaluate(S.mode, r.events, S.cue).ok; };
+  const passes = [[8, 0.1], [25, 0.2], [180, 0.25]];
+  let pi = 0, list = [], idx = 0;
+  const busy = $('busy'); busy.style.display = 'flex';
+  function setup() { const [span, st] = passes[pi]; list = []; for (let d = -span; d <= span + 1e-9; d += st) list.push(base + d); list.sort((x, y) => Math.abs(x - base) - Math.abs(y - base)); idx = 0; S._ok = []; }
+  setup();
+  function step() {
+    const t0 = performance.now();
+    while (idx < list.length && performance.now() - t0 < 30) { const d = list[idx++]; if (tryAt(d)) S._ok.push(d); }
+    $('busyTxt').textContent = '해법 찾는 중… ' + Math.round(idx / list.length * 100) + '% (범위 ±' + passes[pi][0] + '°)';
+    if (idx < list.length) { setTimeout(step, 0); return; }
+    if (!S._ok.length) { pi++; if (pi < passes.length) { setup(); setTimeout(step, 0); return; } busy.style.display = 'none'; $('res').textContent = '이 당점·세기로는 해법 없음'; $('res').className = 'res ng'; $('seq').textContent = '당점이나 세기를 바꿔 다시 시도해 보세요.'; return; }
+    // group runs, choose the widest, refine edges
+    const st = passes[pi][1]; const ok = S._ok.sort((a, b) => a - b);
+    let runs = [], cur = [ok[0], ok[0]];
+    for (let i = 1; i < ok.length; i++) { if (ok[i] - cur[1] <= st * 1.5) cur[1] = ok[i]; else { runs.push(cur); cur = [ok[i], ok[i]]; } }
+    runs.push(cur);
+    runs.sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]) || Math.abs((a[0] + a[1]) / 2 - base) - Math.abs((b[0] + b[1]) / 2 - base));
+    let [lo, hi] = runs[0];
+    const f = 0.01; let n = 0;
+    while (n++ < 60 && tryAt(lo - f)) lo -= f;
+    n = 0; while (n++ < 60 && tryAt(hi + f)) hi += f;
+    S.phi = (lo + hi) / 2 * Math.PI / 180;
+    busy.style.display = 'none';
+    $('res').textContent = '해법 찾음'; $('res').className = 'res ok';
+    $('seq').textContent = '허용 조준 오차 ±' + ((hi - lo) / 2 + f / 2).toFixed(2) + '° (넓을수록 쉬운 공)';
+    schedulePred();
+  }
+  setTimeout(step, 30);
+}
+
+// ---------- presets ----------
+function fillPresets() {
+  const sel = $('preset'); sel.innerHTML = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = S.mode === '3c' ? '— 3구 주요 배치 선택 —' : '— 4구 주요 배치 선택 —'; sel.appendChild(o0);
+  PRESETS.filter(p => p.mode === S.mode).forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; sel.appendChild(o); });
+}
+function loadPreset(id) {
+  const p = PRESETS.find(x => x.id === id); if (!p) return;
+  S.cue = 0; S.lastRes = null; S.predRes = null; S.playing = null; S.undo = null;
+  setBallsDiamond(p.balls);
+  S.phi = p.phi * Math.PI / 180; S.a = p.a; S.b = p.b; S.V = p.V; S.elev = p.elev;
+  const tip = v => (Math.abs(v) / 0.2).toFixed(1).replace(/\.0$/, '');
+  const sp = (p.a ? (p.a > 0 ? '우 ' : '좌 ') + tip(p.a) + '팁' : '좌우 중앙') + ' · ' + (p.b ? (p.b > 0 ? '상 ' : '하 ') + tip(p.b) + '팁' : '중단');
+  $('desc').innerHTML = p.desc + '<br><b style="color:#e8eaed">당점</b> ' + sp + ' · <b style="color:#e8eaed">큐 속도</b> ' + p.V + ' m/s' + (p.elev ? ' · <b style="color:#e8eaed">큐 각도</b> ' + p.elev + '°' : '') + ' · 허용 조준 오차 약 ±' + (p.width / 2).toFixed(2) + '°';
+  drawSpin(); $('res').textContent = p.name; $('res').className = 'res'; $('seq').textContent = '[치기]를 눌러 보세요';
+  schedulePred();
+}
+
+// ---------- physics settings ----------
+const PHYS = [
+  ['muS', '천 미끄럼 마찰 μs', 0.08, 0.40, 0.01, 1],
+  ['muR', '구름 저항 μr', 0.003, 0.02, 0.0005, 1],
+  ['spinDec', '옆회전 감쇠 (rad/s²)', 2, 25, 0.5, 1],
+  ['eCush', '쿠션 반발계수', 0.75, 0.99, 0.01, 1],
+  ['muCush', '쿠션 마찰', 0.05, 0.45, 0.01, 1],
+  ['hCush', '쿠션 높이 (mm)', 33, 42, 0.5, 1000],
+  ['eBall', '공-공 반발계수', 0.85, 0.99, 0.01, 1],
+  ['endMass', '큐 끝 유효질량 (g, 스쿼트)', 2, 40, 1, 1000],
+  ['cueM', '큐 무게 (g)', 450, 600, 5, 1000],
+];
+function buildPhys() {
+  const g = $('physGrid'); g.innerHTML = '';
+  for (const [k, lab, mn, mx, st, mul] of PHYS) {
+    g.insertAdjacentHTML('beforeend', '<span>' + lab + '</span><b>' + (+(S.p[k] * mul).toFixed(4)) + '</b>');
+  }
+  g.insertAdjacentHTML('beforeend', '<span>테이블 플레이 면</span><b>' + S.T.L + ' × ' + S.T.W + ' m</b>');
+}
+
+// ---------- input on table ----------
+let drag = null;
+cv.addEventListener('pointerdown', e => {
+  if (S.playing) return;
+  const rc = cv.getBoundingClientRect();
+  const [wx, wy] = toWorld(e.clientX - rc.left, e.clientY - rc.top);
+  cv.setPointerCapture(e.pointerId);
+  if (S.lastRes) commitLast();
+  if (S.net && netLocked()) { drag = null; return; }
+  if (S.place && !S.game && !S.net) {
+    let bi = -1, bd = 1e9;
+    S.balls.forEach((b, i) => { const d = Math.hypot(b.x - wx, b.y - wy); if (d < bd) { bd = d; bi = i; } });
+    if (bd < S.p.R * 3.5) drag = { kind: 'ball', i: bi, ox: S.balls[bi].x - wx, oy: S.balls[bi].y - wy };
+  } else { drag = { kind: 'aim' }; aimAt(wx, wy); }
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const rc = cv.getBoundingClientRect();
+  const [wx, wy] = toWorld(e.clientX - rc.left, e.clientY - rc.top);
+  if (drag.kind === 'aim') aimAt(wx, wy);
+  else {
+    const R = S.p.R, b = S.balls[drag.i];
+    let nx = Math.min(S.T.L - R, Math.max(R, wx + drag.ox)), ny = Math.min(S.T.W - R, Math.max(R, wy + drag.oy));
+    for (let it = 0; it < 4; it++) S.balls.forEach((o, j) => { if (j === drag.i) return; const dx = nx - o.x, dy = ny - o.y, d = Math.hypot(dx, dy); if (d < 2 * R + 1e-4) { const k = (2 * R + 1e-4) / (d || 1e-6); nx = o.x + dx * k; ny = o.y + dy * k; } });
+    b.x = Math.min(S.T.L - R, Math.max(R, nx)); b.y = Math.min(S.T.W - R, Math.max(R, ny));
+    schedulePred();
+  }
+});
+cv.addEventListener('pointerup', () => { drag = null; });
+function aimAt(wx, wy) { const cb = S.balls[S.cue]; if (Math.hypot(wx - cb.x, wy - cb.y) < S.p.R * 0.5) return; S.phi = Math.atan2(wy - cb.y, wx - cb.x); schedulePred(); }
+
+// ---------- wiring ----------
+document.querySelectorAll('#modeTabs button').forEach(bt => bt.onclick = () => setMode(bt.dataset.m));
+function setMode(m) {
+  S.mode = m; S.T = Object.assign({}, TABLES[m]); S.cue = 0; S.lastRes = null; S.playing = null; S.predRes = null; S.undo = null;
+  document.querySelectorAll('#modeTabs button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+  $('btnSwap').style.display = m === '3c' ? '' : 'none';
+  layout(); fillPresets(); buildPhys();
+  loadPreset(m === '3c' ? 'break' : 'mil');
+  $('preset').value = m === '3c' ? 'break' : 'mil';
+}
+$('preset').onchange = () => { if ($('preset').value) loadPreset($('preset').value); };
+$('btnLoad').onclick = () => { if ($('preset').value) loadPreset($('preset').value); };
+$('power').oninput = e => { if (netLocked()) { updReads(); return; } S.V = +e.target.value; schedulePred(); };
+$('elev').oninput = e => { if (netLocked()) { updReads(); return; } S.elev = +e.target.value; schedulePred(); };
+$('spinReset').onclick = () => { S.a = 0; S.b = 0; drawSpin(); schedulePred(); };
+const PAINTS = [];
+window.__repaint = () => PAINTS.forEach(f => f());
+function tog(id, key, label) {
+  const bt = $(id);
+  const paint = () => { bt.classList.toggle('on', S[key]); bt.textContent = label + (S[key] ? ' 켬' : ' 끔'); };
+  PAINTS.push(paint);
+  bt.onclick = () => { S[key] = !S[key]; paint(); if (key === 'pred') schedulePred(); else draw(); };
+  paint();
+}
+tog('tgAim', 'aimLine', '조준선'); tog('tgPred', 'pred', '예상 경로'); tog('tgTrail', 'trail', '지나간 길'); tog('tgSys', 'sys', '시스템');
+$('tgSys').addEventListener('click', () => { $('sysBox').style.display = S.sys ? '' : 'none'; schedulePred(); });
+$('sysApply').onclick = () => { const ci = S.sysInfo; if (!ci) return; const a = Math.min(0.6, ci.tip * 0.2) * ci.sign; S.a = Math.round(a * 50) / 50; drawSpin(); schedulePred(); };
+$('tgPlace').onclick = e => { S.place = !S.place; e.target.classList.toggle('on', S.place); };
+document.querySelectorAll('.aimgrid button').forEach(bt => bt.onclick = () => { if (S.lastRes) commitLast(); S.phi += (+bt.dataset.d) * Math.PI / 180; schedulePred(); });
+$('btnShoot').onclick = shoot;
+$('btnUndo').onclick = () => { if (S.game) return; if (S.playing) { S.playing = null; } if (S.undo) { S.balls = C.cloneBalls(S.undo); } S.lastRes = null; $('res').textContent = '되돌림'; $('res').className = 'res'; $('seq').textContent = ''; schedulePred(); };
+$('btnAuto').onclick = autoAim;
+$('speed').onchange = e => { if (S.playing) S.playing.speed = +e.target.value; };
+$('btnSwap').onclick = () => { if (S.mode !== '3c') return; if (S.lastRes) commitLast(); S.cue = S.cue === 0 ? 1 : 0; drawSpin(); schedulePred(); };
+window.addEventListener('resize', () => { layout(); draw(); });
+
+
+// ---------- 하이런 모드 ----------
+const HR_LIMIT = { '3c': { hr: 7, master: 5, pro: 3 }, '4b': { hr: 5, master: 3, pro: 1 } };
+const HR_NAME = { hr: '하이런', master: '고수 하이런', pro: '프로 하이런' };
+const START = {
+  '3c': [[2, 2 - 0.4293], [2, 2], [6, 2]],              // 흰 공 헤드스팟 옆 15.24cm, 노랑 헤드스팟, 빨강 풋스팟
+  '4b': [[4, 0.12], [2, 2], [4, 3.88], [6, 2]],          // 깨기 전: 흰 공·빨강1은 양쪽 장쿠션 가운데, 노랑·빨강2는 스팟
+};
+const HR = { table: '3c', level: 'hr', target: 10 };
+function loadBest() { try { return JSON.parse(localStorage.getItem('carom_highrun') || '{}'); } catch (e) { return {}; } }
+function saveBest(k, v) { try { const b = loadBest(); b[k] = v; localStorage.setItem('carom_highrun', JSON.stringify(b)); } catch (e) {} }
+function paintSetup() {
+  document.querySelectorAll('#hrTable button').forEach(b => b.classList.toggle('on', b.dataset.t === HR.table));
+  document.querySelectorAll('#hrLevel button').forEach(b => b.classList.toggle('on', b.dataset.l === HR.level));
+  for (const l of ['hr', 'master', 'pro']) $('lv_' + l).textContent = '실패 ' + HR_LIMIT[HR.table][l] + '번까지';
+  $('tgtVal').value = HR.target;
+  const bst = loadBest()[HR.table + '_' + HR.level];
+  $('hrBest').textContent = bst ? '이 설정 최고 기록: ' + bst.score + '점 · 최대 연속 ' + bst.run + '점' : '';
+}
+function openSetup() {
+  if (S.playing) return;
+  HR.table = S.game ? S.game.table : S.mode;
+  $('hrSetup').style.display = ''; $('hrEnd').style.display = 'none';
+  paintSetup(); $('hrModal').style.display = 'flex';
+}
+function readTarget() { const v = Math.floor(+$('tgtVal').value); HR.target = v >= 1 ? v : 1; $('tgtVal').value = HR.target; }
+function setBallsStart(t) { setBallsDiamond(START[t]); S.balls.forEach(b => b.q = [1, 0, 0, 0]); }
+function startGame() {
+  readTarget();
+  $('hrModal').style.display = 'none';
+  document.body.classList.add('ingame');
+  $('gameHud').style.display = 'flex';
+  setMode(HR.table);
+  S.game = { table: HR.table, level: HR.level, limit: HR_LIMIT[HR.table][HR.level], target: HR.target, score: 0, fails: 0, run: 0, best: 0, shots: 0, over: false };
+  // 하이런 모드: 조준선만 표시
+  S.aimLine = true; S.pred = false; S.trail = false; S.sys = false; S.place = false;
+  $('sysBox').style.display = 'none';
+  document.querySelectorAll('#modeTabs button').forEach(b => b.disabled = true);
+  $('btnHR').style.display = 'none';
+  setBallsStart(HR.table);
+  S.a = 0; S.b = 0; S.V = 2.8; S.elev = 0; S.phi = 0; drawSpin();
+  updHud(); layout();
+  if (HR.table === '4b') { doBreak(); return; }
+  $('res').textContent = '첫 샷을 준비하세요'; $('res').className = 'res'; $('seq').textContent = '규칙: 두 적구를 맞히되 2적구 전에 쿠션 3개 이상';
+  schedulePred();
+}
+function updHud() {
+  const g = S.game; if (!g) return;
+  $('hudLevel').textContent = { hr: '하이런', master: '고수', pro: '프로' }[g.level] + '·' + (g.table === '3c' ? '대대' : '중대');
+  $('hudScore').textContent = g.score + ' / ' + g.target;
+  $('hudFail').textContent = g.fails + ' / ' + g.limit;
+  $('hudRun').textContent = g.run + '·최대 ' + g.best;
+}
+function gameAfterShot(res) {
+  const g = S.game; g.shots++;
+  const ok = res.ev.ok;
+  if (ok) { g.score++; g.run++; g.best = Math.max(g.best, g.run); }
+  else { g.fails++; g.run = 0; }
+  // 4구 감점: 아무 공도 못 맞히거나 상대 공(노랑)을 맞히면 −1점 (최저 0점)
+  let pen = '';
+  if (g.table === '4b' && !ok) {
+    const none = !(res.ev.seq || []).some(s => s.t === 'b');
+    if (res.ev.foul || none) {
+      if (g.score > 0) { g.score--; pen = ' · ' + (res.ev.foul ? '파울' : '헛맞음') + ' −1점'; }
+      else pen = ' · ' + (res.ev.foul ? '파울' : '헛맞음') + ' (0점 유지)';
+    }
+  }
+  // 수구가 다른 공에 붙으면 초구 배치로 재배치
+  const R = S.p.R, cb = S.balls[S.cue];
+  const frozen = S.balls.some((o, i) => i !== S.cue && Math.hypot(o.x - cb.x, o.y - cb.y) < 2 * R + 0.001);
+  if (frozen && g.table === '3c') setBallsStart(g.table);
+  $('seq').textContent = (ok ? '+1점' : '실패 ' + g.fails + '/' + g.limit + pen) + ' · ' + $('seq').textContent.split(' · 스쿼트')[0] + (frozen ? ' · 공이 붙어 초구 배치로 재배치' : '');
+  updHud();
+  S.lastRes = null; // 다음 샷 바로 준비 (지나간 길 표시 안 함)
+  if (g.score >= g.target) endGame(true);
+  else if (g.fails >= g.limit) endGame(false);
+  else if (frozen && g.table === '4b') { setBallsStart('4b'); doBreak('공이 붙어서 다시 깹니다'); }
+  else schedulePred();
+}
+// 4구 깨기: 공 4개를 양쪽 장쿠션에서 동시에 쳐서 가운데서 부딪치게 함 (매번 무작위)
+//  아래 장쿠션: 흰 공(수구)·노랑 / 위 장쿠션: 빨강1·빨강2
+// 깨기 계산: 시작 위치와 공마다 친 값(strikes)을 남겨서 온라인 대전에서도 똑같이 재생할 수 있게 함
+function computeBreak() {
+  const u0 = u(), R = S.p.R, W = S.T.W;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  let res = null, last = null;
+  for (let tries = 0; tries < 30 && !res; tries++) {
+    setBallsStart('4b');
+    const bs = C.cloneBalls(S.balls);
+    const sideA = Math.random() < 0.5 ? -1 : 1, sideB = Math.random() < 0.5 ? -1 : 1;
+    const start = [
+      [4 + sideA * rnd(0.5, 1.1), 0],      // 흰 공 (아래)
+      [4 - sideA * rnd(0.5, 1.1), 0],      // 노랑 (아래)
+      [4 + sideB * rnd(0.5, 1.1), 1],      // 빨강1 (위)
+      [4 - sideB * rnd(0.5, 1.1), 1],      // 빨강2 (위)
+    ];
+    start.forEach(([X, top], i) => { bs[i].x = X * u0; bs[i].y = top ? W - R - 0.004 : R + 0.004; });
+    const startPos = bs.map(b => [b.x, b.y]);
+    const mx = (4 + rnd(-0.4, 0.4)) * u0, my = W / 2 + rnd(-0.25, 0.25) * u0;
+    const V = rnd(3.0, 4.2);
+    const dist = bs.map(b => Math.hypot(mx - b.x, my - b.y));
+    const strikes = bs.map((b, i) => {
+      const tx = mx + rnd(-1.5, 1.5) * R, ty = my + rnd(-1.5, 1.5) * R;   // 조금씩 엇갈리게
+      return { i, phi: Math.atan2(ty - b.y, tx - b.x), V: V * dist[i] / dist[0] * rnd(0.85, 1.15), a: rnd(-0.35, 0.35), b: rnd(-0.35, 0.35), el: 0 };
+    });
+    strikes.forEach(k => C.strike(bs[k.i], S.p, k.phi, k.V, k.a, k.b, k.el));
+    const r = C.simulate(bs, S.p, S.T, { record: true, frameDt: 1 / 120 });
+    const hits = r.events.filter(e => e.k === 'b').length;
+    const fin = r.balls;
+    const frozen = [0, 1].some(c => fin.some((o, i) => i !== c && Math.hypot(o.x - fin[c].x, o.y - fin[c].y) < 2 * R + 0.001));
+    last = { startPos, strikes, res: r };
+    if (hits >= 2 && !frozen) res = last;
+  }
+  return res || last;
+}
+function doBreak(msg) {
+  const br = computeBreak(), res = br.res;
+  S.balls = C.cloneBalls(S.balls);
+  S.balls.forEach((b, i) => { b.x = br.startPos[i][0]; b.y = br.startPos[i][1]; });
+  S.lastRes = null; S.predRes = null;
+  $('res').textContent = '깨는 중…'; $('res').className = 'res'; $('seq').textContent = msg || '공 4개가 동시에 가운데로 모여 부딪쳐 배치가 정해져요';
+  S.playing = { res, t: 0, last: performance.now(), speed: 1, isBreak: true };
+  requestAnimationFrame(tick);
+}
+function afterBreak() {
+  S.lastRes = null;
+  $('res').textContent = '깨기 완료 — 첫 샷을 치세요'; $('res').className = 'res';
+  $('seq').textContent = '규칙: 빨간 공 2개를 맞히고 노란 공은 피하기';
+  schedulePred(); draw();
+}
+function endGame(win) {
+  const g = S.game; g.over = true;
+  const key = g.table + '_' + g.level, old = loadBest()[key];
+  const rec = { score: Math.max(g.score, old ? old.score : 0), run: Math.max(g.best, old ? old.run : 0) };
+  const newRec = !old || g.score > old.score || g.best > old.run;
+  saveBest(key, rec);
+  $('endTitle').textContent = win ? '목표 달성! 🎱' : '게임 종료';
+  $('endScore').textContent = g.score + '점';
+  $('endDetail').innerHTML = HR_NAME[g.level] + ' · ' + (g.table === '3c' ? '대대' : '중대') + '<br>목표 ' + g.target + '점 · 실패 ' + g.fails + '/' + g.limit + ' · 총 ' + g.shots + '샷 · 최대 연속 ' + g.best + '점' + (newRec ? '<br><b style="color:#5cd18a">새 최고 기록!</b>' : '<br>최고 기록 ' + rec.score + '점 · 최대 연속 ' + rec.run + '점');
+  $('hrSetup').style.display = 'none'; $('hrEnd').style.display = 'block';
+  setTimeout(() => { $('hrModal').style.display = 'flex'; }, 500);
+}
+function exitGame() {
+  S.game = null;
+  document.body.classList.remove('ingame');
+  $('gameHud').style.display = 'none'; $('hrModal').style.display = 'none';
+  document.querySelectorAll('#modeTabs button').forEach(b => b.disabled = false);
+  $('btnHR').style.display = '';
+  S.trail = true; S.pred = false; S.aimLine = true; S.sys = false;
+  if (window.__repaint) window.__repaint();
+  setMode(S.mode);
+}
+$('btnHR').onclick = openSetup;
+document.querySelectorAll('#hrTable button').forEach(b => b.onclick = () => { HR.table = b.dataset.t; paintSetup(); });
+document.querySelectorAll('#hrLevel button').forEach(b => b.onclick = () => { HR.level = b.dataset.l; paintSetup(); });
+$('tgtMinus').onclick = () => { readTarget(); HR.target = Math.max(1, HR.target - 1); $('tgtVal').value = HR.target; };
+$('tgtPlus').onclick = () => { readTarget(); HR.target += 1; $('tgtVal').value = HR.target; };
+$('tgtVal').onchange = readTarget;
+$('hrStart').onclick = startGame;
+$('hrCancel').onclick = () => { $('hrModal').style.display = 'none'; };
+$('endRetry').onclick = startGame;
+$('endSetup').onclick = () => { $('hrSetup').style.display = ''; $('hrEnd').style.display = 'none'; paintSetup(); };
+$('endExit').onclick = exitGame;
+$('hudQuit').onclick = () => { if (S.playing) return; if (S.game && !S.game.over) endGame(false); };
+
+
+// ---------- 키보드 단축키 ----------
+const AIM_KEYS = { KeyQ: 1, KeyW: 0.1, KeyE: 0.02, KeyR: -0.02, KeyT: -0.1, KeyY: -1 };   // + = 왼쪽(반시계)
+const POW_KEYS = { KeyA: -0.5, KeyS: -0.05, KeyD: 0.05, KeyF: 0.5 };
+let toastT = null;
+function toast(msg) { const t = $('keyToast'); t.textContent = msg; t.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => t.style.opacity = 0, 700); }
+function canControl() { return !S.playing && !(S.game && S.game.over) && !netLocked(); }
+document.addEventListener('keydown', e => {
+  if ($('keyModal').style.display === 'flex') { if (e.code === 'Escape' || e.code === 'Enter') { e.preventDefault(); $('keyModal').style.display = 'none'; } return; }
+  if ($('hrModal').style.display === 'flex') return;
+  const tg = e.target;
+  if (tg && (tg.tagName === 'INPUT' && tg.type !== 'range' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT')) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (netLocked()) return;
+  const c = e.code;
+  let handled = true;
+  if (c in AIM_KEYS) {
+    if (!canControl()) return;
+    if (S.lastRes) commitLast();
+    S.phi += AIM_KEYS[c] * Math.PI / 180; schedulePred();
+    toast((AIM_KEYS[c] > 0 ? '왼쪽 ' : '오른쪽 ') + Math.abs(AIM_KEYS[c]) + '°');
+  } else if (c in POW_KEYS) {
+    S.V = Math.round(Math.min(6, Math.max(0.3, S.V + POW_KEYS[c])) * 100) / 100; schedulePred();
+    toast('세기 ' + S.V.toFixed(2));
+  } else if (c === 'ArrowUp' || c === 'ArrowDown' || c === 'ArrowLeft' || c === 'ArrowRight') {
+    let a = S.a + (c === 'ArrowRight' ? 0.02 : c === 'ArrowLeft' ? -0.02 : 0);
+    let b = S.b + (c === 'ArrowUp' ? 0.02 : c === 'ArrowDown' ? -0.02 : 0);
+    const m = Math.hypot(a, b);
+    if (m > MAXOFF) { a *= MAXOFF / m; b *= MAXOFF / m; }
+    S.a = Math.round(a * 100) / 100; S.b = Math.round(b * 100) / 100;
+    drawSpin(); schedulePred();
+    toast('당점 ' + $('spinRead').innerText.replace('\n', ' · '));
+  } else if (c === 'KeyO' || c === 'KeyP') {
+    S.elev = Math.min(75, Math.max(0, S.elev + (c === 'KeyP' ? 1 : -1))); schedulePred();
+    toast('큐 각도 ' + S.elev + '°');
+  } else if (c === 'Enter' || c === 'NumpadEnter') {
+    if (canControl()) shoot();
+  } else handled = false;
+  if (handled) { e.preventDefault(); if (document.activeElement && document.activeElement.blur && document.activeElement !== document.body) document.activeElement.blur(); }
+});
+$('btnKeys').onclick = () => { $('keyModal').style.display = 'flex'; };
+$('keyClose').onclick = () => { $('keyModal').style.display = 'none'; };
+$('keyModal').addEventListener('click', e => { if (e.target.id === 'keyModal') $('keyModal').style.display = 'none'; });
+
+
+// ---------- 온라인 대전 (room capability: 같은 방 코드에 들어온 사람끼리 presence로 게임 상태 공유) ----------
+// 게임 상태 G는 '방금 친 사람'이 만들어 자기 presence에 올리고, 모두 seq가 가장 큰 G를 따른다.
+// 상대 화면은 G.last(시작 위치 + 친 값)로 같은 장면을 재생한 뒤, 친 사람의 최종 위치로 맞춘다.
+const NET = { room: undefined, r: null, code: '', cid: '', name: '', host: false, cfg: { mode: '3c', target: 5 }, G: null, anim: 0, peers: [], unsub: [], aimT: 0, pending: null, mirroring: false };
+const NET_TARGET = { '3c': 5, '4b': 15 };
+const FIN_NEED = 2; // 4구 마무리 쓰리쿠션 개수
+try { NET.cid = localStorage.getItem('carom_cid') || ''; NET.name = localStorage.getItem('carom_name') || ''; } catch (e) {}
+if (!NET.cid) { NET.cid = 'c' + Math.random().toString(36).slice(2, 10); try { localStorage.setItem('carom_cid', NET.cid); } catch (e) {} }
+
+
+// ---------- P2P 연결 (PeerJS / WebRTC) : 온라인 대전용 '방' 흉내 ----------
+// 방장은 'carom-<코드>' 아이디로 대기하고, 친구는 그 아이디로 직접 연결한다.
+// net 모듈이 쓰는 room API(join → presence / onPeers / onConnection / leave)와 같은 모양으로 감싼다.
+const P2P = (function () {
+  const PeerCls = () => window.Peer || (window.peerjs && window.peerjs.Peer);
+  function join(name) {
+    return new Promise((resolve, reject) => {
+      const P = PeerCls();
+      if (!P) { reject({ code: 'nolib', message: 'PeerJS를 불러오지 못했어요' }); return; }
+      const host = !!NET.host;
+      const peerHandlers = new Set(), connHandlers = new Set();
+      const others = new Map();       // conn.peer -> presence
+      const conns = new Map();        // conn.peer -> conn
+      let mine = {}, left = false, peer = null, settled = false, retryT = null, connected = false;
+      const myLabel = 'me';
+      const freeze = o => Object.freeze(JSON.parse(JSON.stringify(o || {})));
+      const list = () => [{ peer: myLabel, isMe: true, sameTab: true, by: null, kind: 'viewer', guest: false, presence: freeze(mine), updatedAt: Date.now() },
+        ...[...others.entries()].map(([id, p]) => ({ peer: id, isMe: false, sameTab: false, by: null, kind: 'viewer', guest: false, presence: freeze(p), updatedAt: Date.now() }))];
+      const fire = () => { const ps = list(); peerHandlers.forEach(h => { try { h({ peers: ps, joined: [], left: [], updated: ps }); } catch (e) { console.error(e); } }); };
+      const setConn = c => { if (c !== connected) { connected = c; connHandlers.forEach(h => { try { h(c); } catch (e) {} }); } };
+      const sendAll = msg => conns.forEach(c => { try { if (c.open) c.send(msg); } catch (e) {} });
+      function wire(conn) {
+        conn.on('open', () => { conns.set(conn.peer, conn); conn.send({ t: 'pres', p: mine }); setConn(true); if (!host && !settled) { settled = true; resolve(api); } });
+        conn.on('data', m => { if (!m || typeof m !== 'object') return; if (m.t === 'pres' && m.p && typeof m.p === 'object') { others.set(conn.peer, m.p); fire(); } });
+        const gone = () => {
+          conns.delete(conn.peer); others.delete(conn.peer); fire();
+          if (!conns.size) setConn(host && peer && !peer.disconnected);
+          if (!host && !left) scheduleRetry();
+        };
+        conn.on('close', gone); conn.on('error', gone);
+      }
+      function connectToHost() {
+        if (left || !peer || peer.destroyed) return;
+        const c = peer.connect(name, { reliable: true, serialization: 'json' });
+        wire(c);
+      }
+      function scheduleRetry() { clearTimeout(retryT); retryT = setTimeout(() => { if (!left && !conns.size) { if (peer.disconnected) try { peer.reconnect(); } catch (e) {} connectToHost(); } }, 2500); }
+      function start() {
+        peer = host ? new P(name, { debug: 0 }) : new P({ debug: 0 });
+        peer.on('open', () => {
+          if (host) { setConn(true); if (!settled) { settled = true; resolve(api); } }
+          else connectToHost();
+        });
+        peer.on('connection', conn => { if (host) wire(conn); else conn.close(); });
+        peer.on('disconnected', () => { if (!left) setTimeout(() => { try { if (!left && peer.disconnected && !peer.destroyed) peer.reconnect(); } catch (e) {} }, 1500); });
+        peer.on('error', err => {
+          const t = err && err.type;
+          if (!settled) {
+            if (t === 'unavailable-id') { settled = true; try { peer.destroy(); } catch (e) {} reject({ code: 'taken' }); return; }
+            if (t === 'peer-unavailable') { settled = true; try { peer.destroy(); } catch (e) {} reject({ code: 'notfound' }); return; }
+            if (t === 'browser-incompatible') { settled = true; reject({ code: 'browser' }); return; }
+          } else if (!host && t === 'peer-unavailable') { scheduleRetry(); }
+        });
+        setTimeout(() => { if (!settled) { settled = true; try { peer.destroy(); } catch (e) {} reject({ code: 'timeout' }); } }, 15000);
+      }
+      const api = {
+        name,
+        presence(patch) {
+          for (const k in patch) { if (patch[k] === null) delete mine[k]; else mine[k] = patch[k]; }
+          sendAll({ t: 'pres', p: mine }); setTimeout(fire, 0); return Promise.resolve();
+        },
+        peers: list,
+        onPeers(h) { peerHandlers.add(h); setTimeout(() => h({ peers: list(), joined: list(), left: [], updated: [] }), 0); return () => peerHandlers.delete(h); },
+        onConnection(h) { connHandlers.add(h); setTimeout(() => h(connected), 0); return () => connHandlers.delete(h); },
+        connected: () => connected,
+        leave() { left = true; clearTimeout(retryT); conns.forEach(c => { try { c.close(); } catch (e) {} }); try { peer && peer.destroy(); } catch (e) {} return Promise.resolve(); },
+      };
+      // 폰 화면이 꺼졌다 켜지면 다시 연결
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible' || left || !peer) return;
+        if (peer.destroyed) return;
+        if (peer.disconnected) try { peer.reconnect(); } catch (e) {}
+        if (!host && !conns.size) scheduleRetry();
+      });
+      start();
+    });
+  }
+  return { join };
+})();
+
+async function netRoom() {
+  if (!(window.Peer || (window.peerjs && window.peerjs.Peer))) await loadPeerLib();
+  return (window.Peer || (window.peerjs && window.peerjs.Peer)) ? P2P : null;
+}
+function loadPeerLib() {
+  // 첫 CDN이 막혔을 때를 대비한 두 번째 주소
+  return new Promise(res => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+    sc.onload = () => res(); sc.onerror = () => res();
+    document.head.appendChild(sc);
+    setTimeout(res, 8000);
+  });
+}
+function netMe() { return NET.G ? NET.G.players.findIndex(p => p.cid === NET.cid) : -1; }
+function netMyTurn() { const G = NET.G; return !!G && !G.over && G.turn === netMe(); }
+function netLocked() { return !!S.net && !netMyTurn(); }
+const rnd5 = v => Math.round(v * 1e5) / 1e5;
+const posOf = balls => balls.map(b => [rnd5(b.x), rnd5(b.y)]);
+
+// ---- UI: 모달 ----
+function netShow(which) {
+  for (const id of ['netSetup', 'netLobby', 'netEnd']) $(id).style.display = id === which ? 'block' : 'none';
+  $('netModal').style.display = 'flex';
+}
+function netErr(msg) { $('netErr').textContent = msg || ''; }
+function paintNetSetup() {
+  document.querySelectorAll('#netType button').forEach(b => b.classList.toggle('on', b.dataset.t === NET.cfg.mode));
+  $('netTgt').value = NET.cfg.target;
+  $('netRule').textContent = NET.cfg.mode === '3c'
+    ? '대대 3쿠션 · 각자 자기 공(흰/노랑)으로 침 · 득점하면 계속, 실패하면 차례 넘김'
+    : '중대 4구 · 빨간 공 2개 맞히기 · 상대 공 맞으면 실패 · 목표 점수 후 마무리 쓰리쿠션 ' + FIN_NEED + '개 · 공 4개 깨고 시작';
+}
+async function openNet() {
+  if (S.playing) return;
+  if (S.net) { netShow(NET.G && NET.G.over ? 'netEnd' : 'netLobby'); return; }
+  $('netName').value = NET.name; paintNetSetup(); netErr(''); netShow('netSetup');
+  const room = await netRoom();
+  if (!room) netErr('연결 도구를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.');
+}
+function readNetName() {
+  NET.name = ($('netName').value || '').trim().slice(0, 12) || '플레이어';
+  try { localStorage.setItem('carom_name', NET.name); } catch (e) {}
+}
+function readNetTarget() { const v = Math.floor(+$('netTgt').value); NET.cfg.target = v >= 1 ? v : 1; $('netTgt').value = NET.cfg.target; }
+
+async function netEnter(code, host) {
+  readNetName();
+  const room = await netRoom();
+  if (!room) { netErr('연결 도구를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.'); return; }
+  code = (code || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6);
+  if (code.length < 4) { netErr('방 코드 4글자를 넣어 주세요.'); return; }
+  netErr('연결 중…');
+  NET.host = host;
+  try { NET.r = await room.join('carom-' + code); } catch (e) {
+    const c = e && e.code;
+    if (c === 'taken' && host) return 'taken';
+    netErr({ notfound: '방을 찾을 수 없어요. 코드가 맞는지, 방장이 대기실 화면을 켜 두었는지 확인해 주세요.',
+      timeout: '연결 서버에 닿지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.',
+      browser: '이 브라우저는 실시간 연결을 지원하지 않아요. Safari나 Chrome으로 열어 주세요.',
+      nolib: '연결 도구를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.' }[c] || ('방에 들어가지 못했어요 (' + (c || '오류') + '). 잠시 후 다시 시도해 주세요.'));
+    return 'error';
+  }
+  NET.code = code; NET.host = host; NET.G = null; NET.anim = 0; NET.pending = null;
+  try { const sv = JSON.parse(localStorage.getItem('carom_net_' + code) || 'null'); if (sv && sv.players && sv.players.some(p => p.cid === NET.cid)) NET.G = sv; } catch (e) {}
+  NET.r.presence({ cid: NET.cid, name: NET.name, host, cfg: host ? NET.cfg : null, G: NET.G || null, aim: null });
+  NET.unsub.push(NET.r.onPeers(ch => netPeers(ch.peers)));
+  NET.unsub.push(NET.r.onConnection(c => { $('netConn').textContent = c ? '' : '연결이 잠시 끊겼어요 — 다시 연결 중…'; }));
+  netErr('');
+  if (NET.G) { netAdopt(NET.G, true); return; }
+  netShow('netLobby'); paintLobby();
+}
+
+function netPeers(peers) {
+  NET.peers = peers;
+  // 가장 최신 게임 상태 따르기
+  let best = NET.G;
+  for (const p of peers) {
+    const G = p.presence && p.presence.G;
+    if (G && G.code === NET.code && Array.isArray(G.players) && typeof G.seq === 'number' && (!best || G.seq > best.seq)) best = G;
+  }
+  if (best && best !== NET.G) netAdopt(best);
+  // 방장이 정한 설정을 손님 화면에 표시
+  if (!NET.G) paintLobby();
+  // 상대 차례면 상대의 조준을 그대로 보여줌
+  if (NET.G && S.net && !netMyTurn() && !S.playing) {
+    const sh = NET.G.players[NET.G.turn];
+    const pp = peers.find(p => !p.isMe && p.presence && p.presence.cid === (sh && sh.cid) && p.presence.aim);
+    if (pp) {
+      const a = pp.presence.aim;
+      if ([a.phi, a.a, a.b, a.V, a.el].every(v => typeof v === 'number' && isFinite(v))) {
+        S.phi = a.phi; S.a = Math.max(-0.6, Math.min(0.6, a.a)); S.b = Math.max(-0.6, Math.min(0.6, a.b));
+        S.V = Math.max(0.3, Math.min(6, a.V)); S.elev = Math.max(0, Math.min(75, a.el));
+        NET.mirroring = true; drawSpin(); schedulePred(); NET.mirroring = false;
+      }
+    }
+  }
+  if (S.net) updNetHud();
+}
+function lobbyPlayers() {
+  const seen = new Map();
+  for (const p of NET.peers) { const pr = p.presence || {}; if (typeof pr.cid === 'string' && !seen.has(pr.cid)) seen.set(pr.cid, { cid: pr.cid, name: String(pr.name || '플레이어').slice(0, 12), host: !!pr.host, cfg: pr.cfg }); }
+  if (!seen.has(NET.cid)) seen.set(NET.cid, { cid: NET.cid, name: NET.name, host: NET.host, cfg: NET.host ? NET.cfg : null });
+  return [...seen.values()];
+}
+function paintLobby() {
+  if ($('netModal').style.display !== 'flex') return;
+  $('lobCode').textContent = NET.code.toUpperCase();
+  const pl = lobbyPlayers();
+  const hostP = pl.find(p => p.host && p.cfg);
+  const cfg = NET.host ? NET.cfg : (hostP ? hostP.cfg : null);
+  const list = $('lobList'); list.innerHTML = '';
+  pl.forEach(p => { const li = document.createElement('div'); li.className = 'lobp'; li.textContent = (p.host ? '👑 ' : '') + p.name + (p.cid === NET.cid ? ' (나)' : ''); list.appendChild(li); });
+  $('lobCfg').textContent = cfg ? ((cfg.mode === '3c' ? '3구 대대 · 목표 ' : '4구 중대 · 목표 ') + cfg.target + '점' + (cfg.mode === '4b' ? ' + 마무리 쓰리쿠션 ' + FIN_NEED + '개' : '')) : '방장 설정을 기다리는 중…';
+  const others = pl.filter(p => p.cid !== NET.cid);
+  $('lobStart').style.display = NET.host ? '' : 'none';
+  $('lobStart').textContent = NET.G ? '새 게임 시작' : '게임 시작';
+  $('lobBack').style.display = NET.G ? '' : 'none';
+  $('lobStart').disabled = others.length < 1;
+  $('lobWait').textContent = NET.host ? (others.length ? '친구가 들어왔어요. 시작을 누르세요.' : '친구에게 방 코드를 알려 주세요. 들어오면 여기에 이름이 떠요.') : '방장이 게임을 시작하면 바로 넘어가요.';
+}
+
+// ---- 게임 상태 ----
+function respotPos(mode, shooter) {
+  const u0 = u();
+  const D = (x, y) => [rnd5(x * u0), rnd5(y * u0)];
+  const other = 1 - shooter;
+  const pos = [];
+  if (mode === '3c') { pos[shooter] = D(2, 2 - 0.4293); pos[other] = D(2, 2); pos[2] = D(6, 2); }
+  else { pos[shooter] = D(2, 2 - 0.4293); pos[other] = D(2, 2 + 0.4293); pos[2] = D(6, 2); pos[3] = D(4, 2); }
+  return pos;
+}
+function netStartGame() {
+  const pl = lobbyPlayers();
+  const me = pl.find(p => p.cid === NET.cid), op = pl.find(p => p.cid !== NET.cid);
+  if (!op) return;
+  const seq = (NET.G ? NET.G.seq : 0) + 1;
+  netBuildAndPublish([{ cid: me.cid, name: me.name }, { cid: op.cid, name: op.name }], NET.cfg, seq);
+}
+function netBuildAndPublish(players, cfg, seq) {
+  setMode(cfg.mode);
+  const G = { v: 1, code: NET.code, mode: cfg.mode, target: cfg.target, players, score: [0, 0], fin: [0, 0], pend: 0, ext: null, inning: 1, turn: 0, seq, over: false, winner: -1, msg: '게임 시작! ' + players[0].name + ' 먼저', balls: null, last: null };
+  if (cfg.mode === '3c') G.balls = respotPos('3c', 0);
+  else {
+    const br = computeBreak();
+    G.balls = posOf(br.res.balls);
+    G.last = { seq, by: '', kind: 'break', start: br.startPos.map(p => [rnd5(p[0]), rnd5(p[1])]), strikes: br.strikes, msg: '깨기' };
+  }
+  netAdopt(G);
+}
+function netSave() { try { localStorage.setItem('carom_net_' + NET.code, JSON.stringify(NET.G)); } catch (e) {} }
+function netAdopt(G, fromLocal) {
+  NET.G = G; netSave();
+  if (NET.r) NET.r.presence({ G, aim: null });
+  if (!S.net) netEnterView();
+  $('netModal').style.display = 'none';
+  if (S.playing) { NET.pending = G; return; }
+  netApply(G);
+}
+function netApply(G) {
+  if (G.last && G.last.seq === G.seq && NET.anim < G.seq) {
+    NET.anim = G.seq;
+    netReplay(G.last, G);
+    return;
+  }
+  NET.anim = Math.max(NET.anim, G.seq);
+  setBallsPos(G.balls);
+  netAfterState();
+}
+function setBallsPos(pos) { S.balls.forEach((b, i) => { if (pos[i]) { b.x = pos[i][0]; b.y = pos[i][1]; } b.vx = b.vy = b.wx = b.wy = b.wz = 0; }); }
+function simRecord(start, strikes) {
+  const bs = start.map((p, i) => C.makeBall(i, p[0], p[1]));
+  for (const k of strikes) if (bs[k.i]) C.strike(bs[k.i], S.p, k.phi, k.V, k.a, k.b, k.el || 0);
+  return C.simulate(bs, S.p, S.T, { record: true, frameDt: 1 / 120 });
+}
+function netReplay(last, G) {
+  const ok = Array.isArray(last.start) && Array.isArray(last.strikes) && last.start.length === S.balls.length;
+  if (!ok) { setBallsPos(G.balls); netAfterState(); return; }
+  setBallsPos(last.start);
+  const res = simRecord(last.start, last.strikes);
+  // 마지막 장면은 친 사람 화면의 최종 위치로 맞춤 (기기마다 계산이 미세하게 달라도 결과는 같게)
+  const fin = res.frames[res.frames.length - 1];
+  fin.b.forEach((b, i) => { if (G.balls[i]) { b[0] = G.balls[i][0]; b[1] = G.balls[i][1]; } });
+  S.lastRes = null; S.predRes = null;
+  $('res').textContent = last.kind === 'break' ? '깨는 중…' : (G.players.find(p => p.cid === last.by) || { name: '상대' }).name + ' 치는 중…';
+  $('res').className = 'res'; $('seq').textContent = '';
+  S.playing = { res, t: 0, last: performance.now(), speed: +$('speed').value || 1, onDone: () => { setBallsPos(G.balls); netAfterState(); } };
+  updNetHud();
+  requestAnimationFrame(tick);
+}
+function netAfterState() {
+  const G = NET.G;
+  S.lastRes = null;
+  const me = netMe();
+  S.cue = me >= 0 ? (netMyTurn() ? me : G.turn) : G.turn;
+  updNetHud();
+  $('res').textContent = G.over ? '게임 종료' : (netMyTurn() ? '내 차례!' : G.players[G.turn].name + ' 차례');
+  $('res').className = 'res' + (netMyTurn() ? ' ok' : '');
+  $('seq').textContent = G.msg || '';
+  drawSpin(); schedulePred(); draw();
+  if (NET.pending && NET.pending.seq > G.seq) { const P = NET.pending; NET.pending = null; NET.G = P; netApply(P); return; }
+  NET.pending = null;
+  if (G.over) netShowEnd();
+}
+
+// 4구 마무리 쓰리쿠션 판정: 빨간 공 2개, 두 번째 빨간 공 전에 쿠션 3개 이상, 상대 공 맞으면 실패
+function finJudge(events, cue) {
+  const opp = cue === 0 ? 1 : 0; let c = 0; const hit = []; let foul = false;
+  for (const e of events) {
+    if (e.k === 'c' && e.i === cue) { if (hit.length < 2) c++; }
+    else if (e.k === 'b' && (e.i === cue || e.j === cue)) {
+      const o = e.i === cue ? e.j : e.i;
+      if (o === opp) foul = true; else if (!hit.includes(o)) hit.push(o);
+    }
+  }
+  const ok = !foul && hit.length === 2 && c >= 3;
+  return { ok, msg: ok ? '마무리 쓰리쿠션 성공!' : foul ? '파울 (상대 공)' : hit.length < 2 ? '빨간 공 미스' : '쿠션 부족 (' + c + '쿠션)' };
+}
+function netShoot() {
+  const G = NET.G; if (!netMyTurn()) return;
+  const me = netMe();
+  S.cue = me;
+  const start = posOf(S.balls);
+  const strike = { i: me, phi: S.phi, V: S.V, a: S.a, b: S.b, el: S.elev };
+  const res = simRecord(start, [strike]);
+  const name = G.players[me].name, oname = G.players[1 - me].name;
+  const N = JSON.parse(JSON.stringify(G));
+  N.seq = G.seq + 1;
+  let ok, why;
+  const ext = G.ext || null;          // 연장전 진행 중
+  const finPhase = G.mode === '4b' && (ext || G.score[me] >= G.target);
+  if (finPhase) { const j = (window.__finTest || finJudge)(res.events, me); ok = j.ok; why = j.msg; }
+  else { const ev = C.evaluate(G.mode, res.events, me); ok = ev.ok; why = ev.ok ? '득점' : ev.msg; }
+  // 4구 감점: 아무 공도 못 맞히거나 상대 공을 맞히면 -1 (최저 0점)
+  let pen = '';
+  if (G.mode === '4b' && !ext && !finPhase && !ok) {   // 마무리 쓰리쿠션 중에는 감점 없음
+    const opp = 1 - me;
+    const touched = res.events.filter(e => e.k === 'b' && (e.i === me || e.j === me)).map(e => e.i === me ? e.j : e.i);
+    const foul = touched.includes(opp), none = touched.length === 0;
+    if (foul || none) {
+      why = foul ? '파울 (상대 공)' : '헛맞음 (아무 공도 못 맞힘)';
+      if (N.score[me] > 0) { N.score[me]--; pen = ' −1점'; } else pen = ' (0점 유지)';
+    }
+  }
+  const done = i => G.mode === '3c' ? N.score[i] >= G.target : N.fin[i] >= FIN_NEED;
+  const nm = i => G.players[i].name;
+  if (ext) {
+    // 연장전: 한 라운드에 한 번씩. 흰 공(선공) → 노란 공(후공) 순서
+    N.ext.r[me] = ok;
+    if (me === 0) {
+      N.turn = 1;
+      N.msg = '연장전 ' + ext.round + '라운드 · ' + name + (ok ? ' 성공' : ' 실패') + ' (' + why + ') → ' + oname + ' 차례';
+    } else {
+      const a = N.ext.r[0], b = ok;
+      const head = '연장전 ' + ext.round + '라운드 · ' + name + (ok ? ' 성공' : ' 실패') + ' (' + why + ')';
+      if (a !== b) {
+        N.over = true; N.winner = a ? 0 : 1;
+        N.msg = head + ' — ' + nm(N.winner) + ' 승리!';
+      } else {
+        N.ext = { round: ext.round + 1, r: [null, null] }; N.turn = 0; N.inning++;
+        N.msg = head + ' · 둘 다 ' + (a ? '성공' : '실패') + ' → 연장전 ' + N.ext.round + '라운드, ' + nm(0) + ' 차례';
+      }
+    }
+  } else if (ok) {
+    if (finPhase) N.fin[me]++; else N.score[me]++;
+    const prog = finPhase ? ' (' + N.fin[me] + '/' + FIN_NEED + ')' : ' +1';
+    const into4fin = !finPhase && G.mode === '4b' && N.score[me] >= G.target ? ' · 이제 마무리 쓰리쿠션 ' + FIN_NEED + '개' : '';
+    if (done(me)) {
+      if (me === 0) {
+        // 흰 공이 먼저 끝냄 → 노란 공에게 같은 이닝 기회
+        N.pend = 1; N.turn = 1;
+        N.msg = name + ' ' + why + prog + ' — 완료! ' + oname + '의 마지막 이닝';
+      } else if (G.pend) {
+        // 노란 공도 마지막 이닝에 끝냄 → 연장전
+        N.pend = 0; N.ext = { round: 1, r: [null, null] }; N.turn = 0; N.inning++;
+        N.msg = name + ' ' + why + prog + ' — 동점! 연장전 1라운드 (' + (G.mode === '3c' ? '득점' : '쓰리쿠션') + ' 한 번씩), ' + nm(0) + ' 차례';
+      } else { N.over = true; N.winner = me; N.msg = name + ' ' + why + prog + ' — 승리!'; }
+    } else N.msg = name + ' ' + why + prog + ' · 계속 치기' + into4fin;
+  } else {
+    if (G.pend && me === 1) {
+      N.over = true; N.winner = 0; N.pend = 0;
+      N.msg = name + ' ' + why + pen + ' — ' + oname + ' 승리!';
+    } else {
+      N.turn = 1 - me; if (N.turn === 0) N.inning++;
+      N.msg = name + ' ' + why + pen + ' → ' + oname + ' 차례';
+    }
+  }
+  // 다음에 칠 사람의 공이 다른 공에 붙어 있으면 재배치
+  const fin = res.balls, nx = N.turn, R = S.p.R;
+  const frozen = !N.over && fin.some((o, i) => i !== nx && Math.hypot(o.x - fin[nx].x, o.y - fin[nx].y) < 2 * R + 0.001);
+  N.balls = frozen ? respotPos(G.mode, nx) : posOf(fin);
+  if (frozen) N.msg += ' · 공이 붙어 재배치';
+  N.last = { seq: N.seq, by: NET.cid, kind: 'shot', start, strikes: [strike], msg: N.msg };
+  NET.anim = N.seq; NET.G = N; netSave();
+  if (NET.r) NET.r.presence({ G: N, aim: null });
+  // 내 화면 재생
+  const last = res.frames[res.frames.length - 1];
+  last.b.forEach((b, i) => { b[0] = N.balls[i][0]; b[1] = N.balls[i][1]; });
+  S.lastRes = null;
+  $('res').textContent = '…'; $('res').className = 'res'; $('seq').textContent = '';
+  S.playing = { res, t: 0, last: performance.now(), speed: +$('speed').value || 1, onDone: () => { setBallsPos(N.balls); netAfterState(); } };
+  updNetHud();
+  requestAnimationFrame(tick);
+}
+function netSendAim() {
+  if (!NET.r || !netMyTurn() || NET.mirroring) return;
+  const now = performance.now();
+  if (now - NET.aimT < 90) { clearTimeout(NET.aimTimer); NET.aimTimer = setTimeout(netSendAim, 100); return; }
+  NET.aimT = now;
+  NET.r.presence({ aim: { phi: S.phi, a: S.a, b: S.b, V: S.V, el: S.elev } }).catch(() => {});
+}
+
+// ---- 화면 전환 ----
+function netEnterView() {
+  S.net = true;
+  setMode(NET.G.mode);
+  document.body.classList.add('ingame');
+  $('netHud').style.display = 'flex';
+  S.aimLine = true; S.pred = false; S.trail = false; S.sys = false; S.place = false;
+  if (window.__repaint) window.__repaint();
+  layout();
+}
+function updNetHud() {
+  const G = NET.G; if (!G) return;
+  const me = netMe();
+  const nm = i => G.players[i].name + (i === me ? '(나)' : '');
+  const col = i => i === 0 ? '⚪' : '🟡';
+  const fin = i => G.mode === '4b' && G.score[i] >= G.target ? ' 마무리 ' + G.fin[i] + '/' + FIN_NEED : '';
+  $('nhP0').textContent = col(0) + ' ' + nm(0) + ' ' + G.score[0] + fin(0);
+  $('nhP1').textContent = col(1) + ' ' + nm(1) + ' ' + G.score[1] + fin(1);
+  $('nhP0').classList.toggle('turn', !G.over && G.turn === 0);
+  $('nhP1').classList.toggle('turn', !G.over && G.turn === 1);
+  $('nhInfo').textContent = G.ext ? '연장전 ' + G.ext.round + '라운드' : (G.mode === '3c' ? '대대 ' : '중대 ') + G.target + '점 · ' + G.inning + '이닝' + (G.pend ? ' · 마지막 이닝' : '');
+  const shootBtn = $('btnShoot');
+  shootBtn.disabled = !netMyTurn() || !!S.playing;
+  shootBtn.textContent = G.over ? '게임 종료' : netMyTurn() ? '치기 ▶' : '상대 차례';
+}
+function netShowEnd() {
+  const G = NET.G, me = netMe();
+  $('endNetTitle').textContent = G.winner === me ? '승리! 🎉' : me < 0 ? G.players[G.winner].name + ' 승리' : '패배';
+  $('endNetScore').textContent = G.players[0].name + ' ' + G.score[0] + ' : ' + G.score[1] + ' ' + G.players[1].name;
+  $('endNetDetail').textContent = (G.mode === '3c' ? '3구 대대' : '4구 중대') + ' · ' + G.inning + '이닝' + (G.mode === '4b' ? ' · 마무리 ' + G.fin[0] + '/' + G.fin[1] : '') + (G.ext ? ' · 연장전 ' + G.ext.round + '라운드' : '');
+  $('endNetAgain').style.display = NET.host ? '' : 'none';
+  $('endNetWait').style.display = NET.host ? 'none' : '';
+  setTimeout(() => netShow('netEnd'), 400);
+}
+async function netLeave() {
+  NET.unsub.forEach(f => { try { f(); } catch (e) {} }); NET.unsub = [];
+  if (NET.r) { try { await NET.r.leave(); } catch (e) {} }
+  NET.r = null; NET.G = null; NET.code = ''; NET.pending = null;
+  $('netModal').style.display = 'none';
+  if (S.net) {
+    S.net = false; S.playing = null;
+    document.body.classList.remove('ingame');
+    $('netHud').style.display = 'none';
+    $('btnShoot').disabled = false; $('btnShoot').textContent = '치기 ▶';
+    S.trail = true; S.aimLine = true; S.pred = false; S.sys = false;
+    if (window.__repaint) window.__repaint();
+    setMode(S.mode);
+  }
+}
+
+// ---- 버튼 연결 ----
+$('btnNet').onclick = openNet;
+document.querySelectorAll('#netType button').forEach(b => b.onclick = () => { NET.cfg.mode = b.dataset.t; NET.cfg.target = NET_TARGET[b.dataset.t]; paintNetSetup(); });
+$('netTgtMinus').onclick = () => { readNetTarget(); NET.cfg.target = Math.max(1, NET.cfg.target - 1); $('netTgt').value = NET.cfg.target; };
+$('netTgtPlus').onclick = () => { readNetTarget(); NET.cfg.target += 1; $('netTgt').value = NET.cfg.target; };
+$('netTgt').onchange = readNetTarget;
+$('netCreate').onclick = async () => {
+  readNetTarget();
+  for (let i = 0; i < 4; i++) {
+    const code = Math.random().toString(36).replace(/[^a-z0-9]/g, '').slice(2, 6).padEnd(4, 'x');
+    if (await netEnter(code, true) !== 'taken') return;
+  }
+  netErr('방 코드를 만들지 못했어요. 다시 눌러 주세요.');
+};
+$('netJoin').onclick = () => netEnter($('netCode').value, false);
+$('netClose').onclick = () => { $('netModal').style.display = 'none'; };
+$('lobStart').onclick = netStartGame;
+$('lobLeave').onclick = netLeave;
+$('lobBack').onclick = () => { $('netModal').style.display = 'none'; };
+$('lobCopy').onclick = () => { try { navigator.clipboard.writeText(NET.code.toUpperCase()).then(() => { $('lobCopy').textContent = '복사됨'; setTimeout(() => $('lobCopy').textContent = '코드 복사', 1200); }, () => {}); } catch (e) {} };
+$('nhMenu').onclick = () => { if (NET.G && NET.G.over) netShow('netEnd'); else { netShow('netLobby'); paintLobby(); } };
+$('endNetAgain').onclick = () => { const G = NET.G; netBuildAndPublish(G.players, { mode: G.mode, target: G.target }, G.seq + 1); };
+$('endNetLeave').onclick = netLeave;
+
+window.__sim = { S, schedulePred, startGame, HR, NET, finJudge };
+setMode('3c');
+})();
+</script>
+</body>
+</html>
